@@ -4500,6 +4500,17 @@ public abstract class Component
 		}
 	}
 
+	/**
+	 * This method is called whenever a component is added to the component tree connected to the page,
+	 * to allow it to initialize things that depend on other components in the page. This is similar
+	 * to {@link #onInitialize()}. However, onInitialize is only ever called once, the first time the
+	 * component is added. It is not called when a component is removed and then added again.
+	 *
+	 * This method, however, is called every time the component is added to the page's tree. It is
+	 * never called before onInitialize(). It is thus the opposite of onRemove().
+	 *
+	 * Subclasses that override this must call super.onAddToPage().
+	 */
 	protected void onAddToPage()
 	{
 		setRequestFlag(RFLAG_ONADD_SUPER_CALL_VERIFIED, true);
