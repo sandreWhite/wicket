@@ -33,94 +33,84 @@ public class OnReAddTest
 	public WicketTesterScope scope = new WicketTesterScope();
 
 	private boolean onReAddCalled = false;
-
-	private Component createUninitializedProbe()
-	{
-		return new Label("foo")
-		{
-			@Override
-			protected void onReAdd()
-			{
-				super.onReAdd();
-				onReAddCalled = true;
-			}
-		};
-	}
-
-	private Component createInitializedProbe() {
-		Component probe = createUninitializedProbe();
-		probe.internalInitialize();
-		return probe;
-	}
+	private boolean onInitializeCalled = false;
 
 	@Test
-	public void onAddIsNotCalledOnFirstAdd()
+	public void onFirstAddInitializeIsCalled()
 	{
 		Page page = createPage();
 		page.internalInitialize();
 		page.add(createUninitializedProbe());
 		assertFalse(onReAddCalled);
-	}
-
-	private WebPage createPage()
-	{
-		return new WebPage()
-		{
-		};
+		assertTrue(onInitializeCalled);
 	}
 
 	@Test
-	public void onAddIsNotCalledWhenParentIsNotConnectedToPage()
+	public void nothingIsCalledWithoutConnectionToPage()
 	{
 		MarkupContainer container = createContainer();
 		container.internalInitialize();
 		container.add(createUninitializedProbe());
 		assertFalse(onReAddCalled);
+		assertFalse(onInitializeCalled);
 	}
 
 	@Test
-	public void onAddIsNotCalledOnUninitializedProbeWhenParentIsAddedToPage()
+	public void uninitializedComponentIsInitializedOnConnectionToPage()
 	{
+		// "old", initialized container + "new" uninitialized component:
+		// oninitialize should be called on the component when the container
+		// is added to the page, not before.
 		MarkupContainer container = createContainer();
 		container.internalInitialize();
 		container.add(createUninitializedProbe());
 		assertFalse(onReAddCalled);
+		assertFalse(onInitializeCalled);
 		WebPage page = createPage();
 		page.internalInitialize();
 		page.add(container);
 		assertFalse(onReAddCalled);
+		assertTrue(onInitializeCalled);
 	}
 
 	@Test
-	public void onAddIsCalledAfterRemoveAndAdd()
+	public void initializeIsCalledOnFirstAdd_OnReAddIsCalledAfterEachRemoveAndAdd()
 	{
 		Page page = createPage();
 		page.internalInitialize();
 		Component probe = createUninitializedProbe();
 		page.add(probe);
 		assertFalse(onReAddCalled);
+		assertTrue(onInitializeCalled);
+		onInitializeCalled = false;
 		page.remove(probe);
 		assertFalse(onReAddCalled);
+		assertFalse(onInitializeCalled);
 		page.add(probe);
 		assertTrue(onReAddCalled);
+		assertFalse(onInitializeCalled);
 	}
 
 	@Test
-	public void onAddRecursesToChildren()
+	public void onReAddRecursesToChildrenLikeOnInitialize()
 	{
 		Page page = createPage();
 		page.internalInitialize();
 		Component probe = createNestedProbe();
 		page.add(probe);
 		assertFalse(onReAddCalled);
+		assertTrue(onInitializeCalled);
+		onInitializeCalled = false;
 		probe.remove();
+		assertFalse(onInitializeCalled);
 		assertFalse(onReAddCalled);
 		page.add(probe);
+		assertFalse(onInitializeCalled);
 		assertTrue(onReAddCalled);
 	}
 
 	@Test
-	public void onAddEnforcesSuperCall()
+	public void onReAddEnforcesSuperCall()
 	{
 		Page page = createPage();
 		page.internalInitialize();
@@ -137,10 +127,44 @@ public class OnReAddTest
 			brokenProbe.internalInitialize();
 			page.add(brokenProbe);
 			fail("should have thrown exception");
-		} catch (IllegalStateException e)
+		}
+		catch (IllegalStateException e)
 		{
 			assertTrue(e.getMessage().contains("super.onReAdd"));
 		}
+	}
+
+	private Component createUninitializedProbe()
+	{
+		return new Label("foo")
+		{
+			@Override
+			protected void onReAdd()
+			{
+				super.onReAdd();
+				onReAddCalled = true;
+			}
+
+			@Override protected void onInitialize()
+			{
+				super.onInitialize();
+				onInitializeCalled = true;
+			}
+		};
+	}
+
+	private Component createInitializedProbe()
+	{
+		Component probe = createUninitializedProbe();
+		probe.internalInitialize();
+		return probe;
+	}
+
+	private WebPage createPage()
+	{
+		return new WebPage()
+		{
+		};
 	}
 
 	private Component createNestedProbe()
