@@ -939,17 +939,6 @@ public abstract class MarkupContainer extends Component implements Iterable<Comp
 			}
 
 		}
-		// onAdd should only be triggered
-		// - after onInitialize
-		//   - if we are not initialized ourselves yet, then we delay calling onAdd until onInitialize
-		//   - if we are initialized already, we can just call onAdd now
-		// - AND if we already have a page. See #onAdd
-		//   - if we don't have a page yet, our own onAdd will be called when we get added to the page component tree.
-		if (page != null && this.isInitialized())
-		{
-			child.internalOnAdd();
-		}
-
 		// if the PREPARED_FOR_RENDER flag is set, we have already called
 		// beforeRender on this component's children. So we need to initialize the newly added one
 		if (isPreparedForRender())
@@ -958,36 +947,7 @@ public abstract class MarkupContainer extends Component implements Iterable<Comp
 		}
 	}
 
-	@Override protected void onAddToPage()
-	{
-		super.onAddToPage();
-		Component[] children = copyChildren();
-		try
-		{
-			for (final Component child : children)
-			{
-				// We need to check whether the child's wasn't removed from the
-				// component in the meanwhile (e.g. from another's child
-				// onAddToPage)
-				if (child.getParent() == this)
-				{
-					child.internalOnAdd();
-				}
-			}
-		}
-		catch (RuntimeException ex)
-		{
-			if (ex instanceof WicketRuntimeException)
-			{
-				throw ex;
-			}
-			else
-			{
-				throw new WicketRuntimeException("Error adding this container: " +
-						this, ex);
-			}
-		}
-	}
+
 
 	/**
 	 * THIS METHOD IS NOT PART OF THE PUBLIC API, DO NOT CALL IT
@@ -1987,11 +1947,5 @@ public abstract class MarkupContainer extends Component implements Iterable<Comp
 				stream.next();
 			}
 		}
-	}
-
-	@Override protected void onInitialize()
-	{
-		super.onInitialize();
-		internalOnAdd();
 	}
 }
