@@ -27,7 +27,8 @@
 	<version>0.20-SNAPSHOT</version>
 	<packaging>jar</packaging>
 	<properties>
-		<atmosphere.version>2.1.4</atmosphere.version>
+		<atmosphere.version>2.1.8</atmosphere.version>
+		<jquery.atmosphere.version>2.1.6</jquery.atmosphere.version>
 	</properties>
 	<name>Wicket-Atmosphere</name>
 	<description>Wicket-Atmosphere provides integration of the Atmosphere Framework in Wicket.</description>
@@ -53,6 +54,22 @@
 			</exclusions>
 		</dependency>
 		<dependency>
+			<groupId>org.webjars</groupId>
+			<artifactId>jquery-atmosphere</artifactId>
+			<version>${jquery.atmosphere.version}</version>
+			<exclusions>
+				<exclusion>
+					<groupId>org.webjars</groupId>
+					<artifactId>jquery</artifactId>
+				</exclusion>
+			</exclusions>
+		</dependency>
+		<dependency>
+			<groupId>de.agilecoders.wicket.webjars</groupId>
+			<artifactId>wicket-webjars</artifactId>
+			<version>0.4.2</version>
+		</dependency>
+		<dependency>
 			<groupId>com.google.code.findbugs</groupId>
 			<artifactId>jsr305</artifactId>
 			<version>1.3.9</version>
@@ -60,6 +77,12 @@
 		</dependency>
 	</dependencies>
     <build>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>net.alchim31.maven</groupId>

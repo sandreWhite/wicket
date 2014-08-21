@@ -447,7 +447,7 @@ public abstract class Component
 	private static final short RFLAG_CONFIGURED = 0x10;
 	private static final short RFLAG_BEFORE_RENDER_SUPER_CALL_VERIFIED = 0x20;
 	private static final short RFLAG_INITIALIZE_SUPER_CALL_VERIFIED = 0x40;
-	private static final short RFLAG_ONADD_SUPER_CALL_VERIFIED = 0x80;
+	private static final short RFLAG_ON_RE_ADD_SUPER_CALL_VERIFIED = 0x80;
 
 	/**
 	 * Flags that only keep their value during the request. Useful for cache markers, etc. At the
@@ -885,6 +885,18 @@ public abstract class Component
 			setRequestFlag(RFLAG_INITIALIZE_SUPER_CALL_VERIFIED, false);
 
 			getApplication().getComponentInitializationListeners().onInitialize(this);
+		}
+		else
+		{
+			setRequestFlag(RFLAG_ON_RE_ADD_SUPER_CALL_VERIFIED, false);
+			onReAdd();
+			if (!getRequestFlag(RFLAG_ON_RE_ADD_SUPER_CALL_VERIFIED))
+			{
+				throw new IllegalStateException(Component.class.getName() +
+						" has not been properly added. Something in the hierarchy of " +
+						getClass().getName() +
+						" has not called super.onReAdd() in the override of onReAdd() method");
+			}
 		}
 	}
 
@@ -4487,21 +4499,28 @@ public abstract class Component
 		return getBehaviors(null);
 	}
 
-	final void internalOnAdd()
+	/**
+	 * This method is called whenever a component is re-added to the page's component tree, if it
+	 * had been removed at some earlier time, i.e., if it is already initialized
+	 * (see {@link org.apache.wicket.Component#isInitialized()}).
+	 *
+	 * This is similar to onInitialize, but only comes after the component has been removed and
+	 * then
+	 * added again:
+	 *
+	 * <ul><li>onInitialize is only called the very first time a component is added</li>
+	 * <li>onReAdd is not called the first time, but every time it is re-added after having been
+	 * removed</li>
+	 * </ul>
+	 *
+	 * You can think of it as the opposite of onRemove. A component that was once removed will
+	 * not be
+	 * re-initialized but only re-added.
+	 *
+	 * Subclasses that override this must call super.onReAdd().
+	 */
+	protected void onReAdd()
 	{
-		setRequestFlag(RFLAG_ONADD_SUPER_CALL_VERIFIED, false);
-		onAddToPage();
-		if (!getRequestFlag(RFLAG_ONADD_SUPER_CALL_VERIFIED))
-		{
-			throw new IllegalStateException(Component.class.getName() +
-					" has not been properly added. Something in the hierarchy of " +
-					getClass().getName() +
-					" has not called super.onAddToPage() in the override of onAddToPage() method");
-		}
-	}
-
-	protected void onAddToPage()
-	{
-		setRequestFlag(RFLAG_ONADD_SUPER_CALL_VERIFIED, true);
+		setRequestFlag(RFLAG_ON_RE_ADD_SUPER_CALL_VERIFIED, true);
 	}
 }

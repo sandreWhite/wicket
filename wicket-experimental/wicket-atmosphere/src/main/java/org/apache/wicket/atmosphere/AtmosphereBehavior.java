@@ -18,19 +18,18 @@ package org.apache.wicket.atmosphere;
 
 import org.apache.wicket.Application;
 import org.apache.wicket.Component;
-import org.apache.wicket.IResourceListener;
 import org.apache.wicket.MetaDataKey;
 import org.apache.wicket.Page;
 import org.apache.wicket.WicketRuntimeException;
 import org.apache.wicket.ajax.json.JSONException;
 import org.apache.wicket.ajax.json.JSONObject;
-import org.apache.wicket.behavior.Behavior;
+import org.apache.wicket.behavior.AbstractAjaxBehavior;
 import org.apache.wicket.markup.head.IHeaderResponse;
 import org.apache.wicket.markup.head.JavaScriptHeaderItem;
 import org.apache.wicket.markup.head.OnDomReadyHeaderItem;
 import org.apache.wicket.protocol.http.servlet.ServletWebRequest;
 import org.apache.wicket.request.cycle.RequestCycle;
-import org.apache.wicket.request.mapper.parameter.PageParameters;
+import org.apache.wicket.request.http.WebRequest;
 import org.apache.wicket.resource.CoreLibrariesContributor;
 import org.atmosphere.cpr.AtmosphereRequest;
 import org.atmosphere.cpr.AtmosphereResource;
@@ -49,9 +48,8 @@ import org.slf4j.LoggerFactory;
  * 
  * @author papegaaij
  */
-public class AtmosphereBehavior extends Behavior
+public class AtmosphereBehavior extends AbstractAjaxBehavior
 	implements
-		IResourceListener,
 		AtmosphereResourceEventListener
 {
 	private static final Logger log = LoggerFactory.getLogger(AtmosphereBehavior.class);
@@ -68,8 +66,6 @@ public class AtmosphereBehavior extends Behavior
 
 	private String applicationKey;
 
-	private Component component;
-
 
 	/**
 	 * Construct.
@@ -82,12 +78,6 @@ public class AtmosphereBehavior extends Behavior
 	private EventBus findEventBus()
 	{
 		return EventBus.get(Application.get(applicationKey));
-	}
-
-	@Override
-	public void bind(Component component)
-	{
-		this.component = component;
 	}
 
 	@Override
@@ -106,8 +96,9 @@ public class AtmosphereBehavior extends Behavior
 	{
 	}
 
+
 	@Override
-	public void onResourceRequested()
+	public void onRequest()
 	{
 		RequestCycle requestCycle = RequestCycle.get();
 		ServletWebRequest request = (ServletWebRequest)requestCycle.getRequest();
@@ -119,7 +110,7 @@ public class AtmosphereBehavior extends Behavior
 		meteor.suspend(-1);
 
 		String uuid = meteor.getAtmosphereResource().uuid();
-		Page page = component.getPage();
+		Page page = getComponent().getPage();
 		page.setMetaData(ATMOSPHERE_UUID, uuid);
 		findEventBus().registerPage(uuid, page);
 	}
@@ -142,6 +133,11 @@ public class AtmosphereBehavior extends Behavior
 		{
 			Meteor meteor = Meteor.lookup(event.getResource().getRequest());
 			meteor.resume();
+		}
+		EventBus eventBus = findEventBus();
+		if (eventBus.isWantAtmosphereNotifications())
+		{
+			eventBus.post(new AtmosphereInternalEvent(AtmosphereInternalEvent.Type.Broadcast, event));
 		}
 	}
 
@@ -167,6 +163,11 @@ public class AtmosphereBehavior extends Behavior
 			log.debug(String.format("Resuming the %s response from ip %s:%s", transport == null
 				? "websocket" : transport, atmosphereRequest.getRemoteAddr(), atmosphereRequest.getRemotePort()));
 		}
+		EventBus eventBus = findEventBus();
+		if (eventBus.isWantAtmosphereNotifications())
+		{
+			eventBus.post(new AtmosphereInternalEvent(AtmosphereInternalEvent.Type.Resume, event));
+		}
 	}
 
 	@Override
@@ -181,9 +182,15 @@ public class AtmosphereBehavior extends Behavior
 		}
 		// It is possible that the application has already been destroyed, in which case
 		// unregistration is no longer needed
+		EventBus eventBus = findEventBus();
 		if (Application.get(applicationKey) != null)
 		{
-			findEventBus().unregisterConnection(event.getResource().uuid());
+			eventBus.unregisterConnection(event.getResource().uuid());
+		}
+
+		if (eventBus.isWantAtmosphereNotifications())
+		{
+			eventBus.post(new AtmosphereInternalEvent(AtmosphereInternalEvent.Type.Disconnect, event));
 		}
 	}
 
@@ -192,27 +199,44 @@ public class AtmosphereBehavior extends Behavior
 	{
 		Throwable throwable = event.throwable();
 		log.error(throwable.getMessage(), throwable);
+
+		EventBus eventBus = findEventBus();
+		if (eventBus.isWantAtmosphereNotifications())
+		{
+			eventBus.post(new AtmosphereInternalEvent(AtmosphereInternalEvent.Type.Throwable, event));
+		}
 	}
 
 	@Override
 	public void renderHead(Component component, IHeaderResponse response)
 	{
+		super.renderHead(component, response);
 		try
 		{
 			CoreLibrariesContributor.contributeAjax(component.getApplication(), response);
 
 			response.render(JavaScriptHeaderItem.forReference(JQueryWicketAtmosphereResourceReference.get()));
 			JSONObject options = findEventBus().getParameters().toJSON();
-			options.put("url",
-				component.urlFor(this, IResourceListener.INTERFACE, new PageParameters())
-					.toString());
+			options.put("url", getCallbackUrl());
 			response.render(OnDomReadyHeaderItem.forScript("$('#" + component.getMarkupId() +
-				"').wicketAtmosphere(" + options.toString() + ")"));
+					"').wicketAtmosphere(" + options.toString() + ")"));
 		}
 		catch (JSONException e)
 		{
 			throw new WicketRuntimeException(e);
 		}
+	}
+
+	/**
+	 * Make it look like a normal Ajax call so the page id/renderCount are not incremented when Atmosphere makes
+	 * the "upgrade" request
+	 *
+	 * @return the url to this behavior's listener interface
+	 */
+	@Override
+	public CharSequence getCallbackUrl()
+	{
+		return super.getCallbackUrl() + "&" + WebRequest.PARAM_AJAX + "=true&" + WebRequest.PARAM_AJAX_BASE_URL + "=.";
 	}
 
 	/**
