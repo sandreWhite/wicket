@@ -89,6 +89,16 @@ public class OnReAddTest
 		page.add(probe);
 		assertTrue(onReAddCalled);
 		assertFalse(onInitializeCalled);
+		onReAddCalled = false;
+		page.internalInitialize();
+		// just another initialize run shouldn't call onReAdd nor onInitialize. onReAdd should only be called
+		// after remove and add
+		assertFalse(onReAddCalled); 
+		assertFalse(onInitializeCalled);
+		page.remove(probe);
+		page.add(probe);
+		assertTrue(onReAddCalled);
+		assertFalse(onInitializeCalled);
 	}
 
 	@Test

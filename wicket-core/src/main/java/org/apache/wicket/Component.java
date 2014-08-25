@@ -411,6 +411,8 @@ public abstract class Component
 	private static final int FLAG_VISIBILITY_ALLOWED = 0x40000000;
 
 	private static final int FLAG_DETACHING = 0x80000000;
+	
+	private static final int FLAG_RE_ADDED = 0x400000;
 
 	/**
 	 * The name of attribute that will hold markup id
@@ -888,14 +890,18 @@ public abstract class Component
 		}
 		else
 		{
-			setRequestFlag(RFLAG_ON_RE_ADD_SUPER_CALL_VERIFIED, false);
-			onReAdd();
-			if (!getRequestFlag(RFLAG_ON_RE_ADD_SUPER_CALL_VERIFIED))
+			if (!getFlag(FLAG_RE_ADDED))
 			{
-				throw new IllegalStateException(Component.class.getName() +
-						" has not been properly added. Something in the hierarchy of " +
-						getClass().getName() +
-						" has not called super.onReAdd() in the override of onReAdd() method");
+				setFlag(FLAG_RE_ADDED, true);
+				setRequestFlag(RFLAG_ON_RE_ADD_SUPER_CALL_VERIFIED, false);
+				onReAdd();
+				if (!getRequestFlag(RFLAG_ON_RE_ADD_SUPER_CALL_VERIFIED))
+				{
+					throw new IllegalStateException(Component.class.getName() +
+							" has not been properly added. Something in the hierarchy of " +
+							getClass().getName() +
+							" has not called super.onReAdd() in the override of onReAdd() method");
+				}
 			}
 		}
 	}
@@ -1136,6 +1142,7 @@ public abstract class Component
 	{
 		setFlag(FLAG_REMOVING_FROM_HIERARCHY, true);
 		onRemove();
+		setFlag(FLAG_RE_ADDED, false);
 		if (getFlag(FLAG_REMOVING_FROM_HIERARCHY))
 		{
 			throw new IllegalStateException(Component.class.getName() +
@@ -4508,7 +4515,8 @@ public abstract class Component
 	 * then
 	 * added again:
 	 *
-	 * <ul><li>onInitialize is only called the very first time a component is added</li>
+	 * <ul>
+	 * <li>onInitialize is only called the very first time a component is added</li>
 	 * <li>onReAdd is not called the first time, but every time it is re-added after having been
 	 * removed</li>
 	 * </ul>
