@@ -17,6 +17,6 @@
 -->
 <!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
 <properties>
-    <entry key="rating.complete">Noté {0,number,#.#} avec {1,number,#} votes</entry>
-    <entry key="rating.simple">Noté {0,number,#.#}</entry>
+    <entry key="rating.complete">Noté ${rated} avec ${votes} votes</entry>
+    <entry key="rating.simple">Noté ${rated}</entry>
 </properties>

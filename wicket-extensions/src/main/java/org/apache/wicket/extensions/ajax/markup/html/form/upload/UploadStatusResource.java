@@ -19,9 +19,8 @@ package org.apache.wicket.extensions.ajax.markup.html.form.upload;
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.wicket.Application;
-import org.apache.wicket.Component;
 import org.apache.wicket.model.Model;
-import org.apache.wicket.model.StringResourceModel;
+import org.apache.wicket.model.PropertyResourceModel;
 import org.apache.wicket.protocol.http.servlet.MultipartServletWebRequestImpl;
 import org.apache.wicket.protocol.http.servlet.UploadInfo;
 import org.apache.wicket.request.mapper.parameter.PageParameters;
@@ -103,7 +102,7 @@ class UploadStatusResource extends AbstractResource
 		{
 			status = info.getPercentageComplete() +
 				"|" +
-				new StringResourceModel(RESOURCE_STATUS, (Component)null, Model.of(info)).getString();
+ new PropertyResourceModel(RESOURCE_STATUS, null, Model.of(info)).getString();
 		}
 		return status;
 	}

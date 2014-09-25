@@ -85,10 +85,10 @@ import org.apache.wicket.util.string.Strings;
  * <pre>
  * public class MyPage extends WebPage&lt;Void&gt;
  * {
- *    public MyPage(final PageParameters parameters)
- *    {
- *        add(new Label(&quot;username&quot;, new StringResourceModel(&quot;label.username&quot;, this, null)));
- *    }
+ * 	public MyPage(final PageParameters parameters)
+ * 	{
+ * 		add(new Label(&quot;username&quot;, new StringResourceModel(&quot;label.username&quot;, this, null)));
+ * 	}
  * }
  * </pre>
  * 
@@ -101,7 +101,7 @@ import org.apache.wicket.util.string.Strings;
  * <pre>
  * public class MyPage extends WebPage&lt;Void&gt;
  * {
- *     public MyPage(final PageParameters parameters)
+ * 	public MyPage(final PageParameters parameters)
  *     {
  *         WeatherStation ws = new WeatherStation();
  *         add(new Label(&quot;weatherMessage&quot;,
@@ -129,7 +129,7 @@ import org.apache.wicket.util.string.Strings;
  * <pre>
  * public class MyPage extends WebPage&lt;Void&gt;
  * {
- *     public MyPage(final PageParameters parameters)
+ * 	public MyPage(final PageParameters parameters)
  *     {
  *         WeatherStation ws = new WeatherStation();
  *         add(new Label(&quot;weatherMessage&quot;,
@@ -149,7 +149,7 @@ import org.apache.wicket.util.string.Strings;
  * <pre>
  * public class MyPage extends WebPage&lt;Void&gt;
  * {
- *     public MyPage(final PageParameters parameters)
+ * 	public MyPage(final PageParameters parameters)
  *     {
  *         WeatherStation ws = new WeatherStation();
  *         IModel&lt;WeatherStation&gt; model = new Model&lt;WeatherStation&gt;(ws);
@@ -178,7 +178,10 @@ import org.apache.wicket.util.string.Strings;
  *      order
  * 
  * @author Chris Turner
+ * 
+ * @deprecated use {@link PropertyResourceModel} which works without {@link MessageFormat}
  */
+@Deprecated
 public class StringResourceModel extends LoadableDetachableModel<String>
 	implements
 		IComponentAssignedModel<String>

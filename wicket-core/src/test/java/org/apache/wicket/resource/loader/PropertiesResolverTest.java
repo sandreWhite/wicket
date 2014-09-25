@@ -22,7 +22,6 @@ import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.markup.html.WebPage;
 import org.apache.wicket.markup.html.basic.Label;
 import org.apache.wicket.markup.repeater.RepeatingView;
-import org.apache.wicket.model.StringResourceModel;
 import org.apache.wicket.protocol.http.WebApplication;
 import org.apache.wicket.util.tester.WicketTester;
 import org.junit.Assert;
@@ -121,7 +120,7 @@ public class PropertiesResolverTest extends Assert
 
 		private String lookup(String key, Component anchor)
 		{
-			return new StringResourceModel(key, anchor, null, (String)null).getString();
+			return anchor.getString(key);
 		}
 	}
 

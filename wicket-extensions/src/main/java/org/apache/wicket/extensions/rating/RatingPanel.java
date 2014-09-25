@@ -16,6 +16,8 @@
  */
 package org.apache.wicket.extensions.rating;
 
+import java.util.Map;
+
 import org.apache.wicket.AttributeModifier;
 import org.apache.wicket.Component;
 import org.apache.wicket.ajax.AjaxRequestTarget;
@@ -29,12 +31,13 @@ import org.apache.wicket.markup.html.list.LoopItem;
 import org.apache.wicket.markup.html.panel.Panel;
 import org.apache.wicket.model.IModel;
 import org.apache.wicket.model.Model;
-import org.apache.wicket.model.StringResourceModel;
+import org.apache.wicket.model.PropertyResourceModel;
 import org.apache.wicket.request.IRequestHandler;
 import org.apache.wicket.request.handler.resource.ResourceReferenceRequestHandler;
 import org.apache.wicket.request.resource.CssResourceReference;
 import org.apache.wicket.request.resource.PackageResourceReference;
 import org.apache.wicket.request.resource.ResourceReference;
+import org.apache.wicket.util.collections.MiniMap;
 
 /**
  * Rating component that generates a number of stars where a user can click on to rate something.
@@ -358,18 +361,20 @@ public abstract class RatingPanel extends Panel
 	protected Component newRatingLabel(final String id, final IModel<? extends Number> rating,
 		final IModel<Integer> nrOfVotes)
 	{
-		IModel<String> model;
+		String resourceKey;
+		Map<String, IModel<?>> models;
 		if (nrOfVotes == null)
 		{
-			Object[] parameters = new Object[] { rating };
-			model = new StringResourceModel("rating.simple", this, null, parameters);
+			resourceKey = "rating.simple";
+			models = MiniMap.<String, IModel<?>> of("rated", rating);
 		}
 		else
 		{
-			Object[] parameters = new Object[] { rating, nrOfVotes };
-			model = new StringResourceModel("rating.complete", this, null, parameters);
+			resourceKey = "rating.complete";
+			models = MiniMap.<String, IModel<?>> of("rated", rating, "votes", nrOfVotes);
 		}
-		return new Label(id, model);
+
+		return new Label(id, new PropertyResourceModel(resourceKey, this, models, null));
 	}
 
 	/**

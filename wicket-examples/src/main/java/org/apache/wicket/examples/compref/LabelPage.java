@@ -21,7 +21,7 @@ import java.util.Date;
 import org.apache.wicket.examples.WicketExamplePage;
 import org.apache.wicket.markup.html.basic.Label;
 import org.apache.wicket.model.Model;
-import org.apache.wicket.model.StringResourceModel;
+import org.apache.wicket.model.PropertyResourceModel;
 
 
 /**
@@ -59,8 +59,8 @@ public class LabelPage extends WicketExamplePage
 		// We use key 'label.current.locale' and provide a the current locale
 		// for
 		// parameter substitution.
-		StringResourceModel stringResourceModel = new StringResourceModel("label.current.locale",
-			this, null, getLocale());
+		PropertyResourceModel stringResourceModel = new PropertyResourceModel(
+			"label.current.locale", this, Model.of(getLocale()));
 		add(new Label("resourceLabel", stringResourceModel));
 
 		// and here we add a label that contains markup. Normally, this markup

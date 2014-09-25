@@ -23,7 +23,7 @@ import org.apache.wicket.markup.html.basic.Label;
 import org.apache.wicket.markup.html.image.Image;
 import org.apache.wicket.markup.html.link.Link;
 import org.apache.wicket.model.Model;
-import org.apache.wicket.model.StringResourceModel;
+import org.apache.wicket.model.PropertyResourceModel;
 import org.apache.wicket.request.mapper.parameter.PageParameters;
 import org.apache.wicket.request.resource.PackageResourceReference;
 import org.apache.wicket.util.value.ValueMap;
@@ -58,7 +58,7 @@ public final class Home extends WicketExamplePage
 		// variable ${user} will be regconized as a property variable, and will
 		// be substituted with the given model (the wrapped map). Hence,
 		// ${user} will be replaced by map.get('user'), which is 'Jonathan'.
-		StringResourceModel labelModel = new StringResourceModel("salutation", this,
+		PropertyResourceModel labelModel = new PropertyResourceModel("salutation", this,
 			new Model<>(map));
 
 		// Add the label with the dynamic model

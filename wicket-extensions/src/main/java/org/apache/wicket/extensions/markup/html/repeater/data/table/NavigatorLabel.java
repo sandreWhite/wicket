@@ -17,11 +17,11 @@
 package org.apache.wicket.extensions.markup.html.repeater.data.table;
 
 
-import org.apache.wicket.util.io.IClusterable;
 import org.apache.wicket.markup.html.basic.Label;
 import org.apache.wicket.markup.html.navigation.paging.IPageableItems;
 import org.apache.wicket.model.Model;
-import org.apache.wicket.model.StringResourceModel;
+import org.apache.wicket.model.PropertyResourceModel;
+import org.apache.wicket.util.io.IClusterable;
 
 
 /**
@@ -46,7 +46,7 @@ public class NavigatorLabel extends Label
 	public NavigatorLabel(final String id, final IPageableItems pageable)
 	{
 		super(id);
-		setDefaultModel(new StringResourceModel("NavigatorLabel", this,
+		setDefaultModel(new PropertyResourceModel("NavigatorLabel", this,
 			new Model<>(new LabelModelObject(pageable))));
 	}
 

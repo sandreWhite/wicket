@@ -16,7 +16,6 @@
  */
 package org.apache.wicket.examples.ajax.builtin;
 
-import org.apache.wicket.util.io.IClusterable;
 import org.apache.wicket.ajax.AjaxRequestTarget;
 import org.apache.wicket.extensions.rating.RatingPanel;
 import org.apache.wicket.markup.html.link.Link;
@@ -27,6 +26,7 @@ import org.apache.wicket.request.IRequestHandler;
 import org.apache.wicket.request.handler.resource.ResourceReferenceRequestHandler;
 import org.apache.wicket.request.resource.PackageResourceReference;
 import org.apache.wicket.request.resource.ResourceReference;
+import org.apache.wicket.util.io.IClusterable;
 
 
 /**
@@ -188,7 +188,7 @@ public class RatingsPage extends BasePage
 		});
 
 		add(new RatingPanel("rating2", new PropertyModel<Integer>(rating2, "rating"),
-			new Model<Integer>(5), new PropertyModel<Integer>(rating2, "nrOfVotes"),
+			new Model<Integer>(5), null,
 			new PropertyModel<Boolean>(this, "hasVoted"), true)
 		{
 			@Override

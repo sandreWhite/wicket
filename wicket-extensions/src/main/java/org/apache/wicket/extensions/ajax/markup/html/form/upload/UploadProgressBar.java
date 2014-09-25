@@ -30,8 +30,7 @@ import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.markup.html.form.Form;
 import org.apache.wicket.markup.html.form.upload.FileUploadField;
 import org.apache.wicket.markup.html.panel.Panel;
-import org.apache.wicket.model.IModel;
-import org.apache.wicket.model.StringResourceModel;
+import org.apache.wicket.model.PropertyResourceModel;
 import org.apache.wicket.request.resource.CssResourceReference;
 import org.apache.wicket.request.resource.JavaScriptResourceReference;
 import org.apache.wicket.request.resource.ResourceReference;
@@ -233,7 +232,7 @@ public class UploadProgressBar extends Panel
 
 		final String uploadFieldId = (uploadField == null) ? "" : uploadField.getMarkupId();
 
-		final String status = new StringResourceModel(RESOURCE_STARTING, this, (IModel<?>)null).getString();
+		final String status = new PropertyResourceModel(RESOURCE_STARTING, this, null).getString();
 
 		CharSequence url = urlFor(ref, UploadStatusResource.newParameter(getPage().getId()));
 

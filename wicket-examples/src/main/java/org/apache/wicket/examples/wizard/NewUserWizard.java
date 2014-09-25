@@ -38,7 +38,7 @@ import org.apache.wicket.model.CompoundPropertyModel;
 import org.apache.wicket.model.IModel;
 import org.apache.wicket.model.Model;
 import org.apache.wicket.model.ResourceModel;
-import org.apache.wicket.model.StringResourceModel;
+import org.apache.wicket.model.PropertyResourceModel;
 import org.apache.wicket.validation.ValidationError;
 import org.apache.wicket.validation.validator.EmailAddressValidator;
 
@@ -68,8 +68,8 @@ public class NewUserWizard extends Wizard
 			super(true);
 			IModel<User> userModel = new Model<>(user);
 			setTitleModel(new ResourceModel("confirmation.title"));
-			setSummaryModel(new StringResourceModel("confirmation.summary", this, userModel));
-			setContentModel(new StringResourceModel("confirmation.content", this, userModel));
+			setSummaryModel(new PropertyResourceModel("confirmation.summary", this, userModel));
+			setContentModel(new PropertyResourceModel("confirmation.content", this, userModel));
 		}
 	}
 
@@ -84,7 +84,7 @@ public class NewUserWizard extends Wizard
 		public UserDetailsStep()
 		{
 			setTitleModel(new ResourceModel("confirmation.title"));
-			setSummaryModel(new StringResourceModel("userdetails.summary", this, new Model<>(
+			setSummaryModel(new PropertyResourceModel("userdetails.summary", this, new Model<>(
 				user)));
 			add(new RequiredTextField<>("user.firstName"));
 			add(new RequiredTextField<>("user.lastName"));
@@ -129,7 +129,7 @@ public class NewUserWizard extends Wizard
 		public UserRolesStep()
 		{
 			super(new ResourceModel("userroles.title"), null);
-			setSummaryModel(new StringResourceModel("userroles.summary", this,
+			setSummaryModel(new PropertyResourceModel("userroles.summary", this,
 				new Model<>(user)));
 			final ListMultipleChoice<String> rolesChoiceField = new ListMultipleChoice<>(
 				"user.roles", allRoles);

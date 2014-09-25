@@ -540,4 +540,108 @@ public class MiniMap<K, V> implements Map<K, V>, Serializable
 
 		return -1;
 	}
+
+	/**
+	 * A map with two entries.
+	 * 
+	 * @param key
+	 *            key of entry
+	 * @param value
+	 *            value of entry
+	 * @return map
+	 */
+	public static <K, V> Map<K, V> of(K key, V value)
+	{
+		MiniMap<K, V> map = new MiniMap<>(1);
+
+		map.put(key, value);
+
+		return map;
+	}
+
+	/**
+	 * A map with two entries.
+	 * 
+	 * @param key1
+	 *            key of first entry
+	 * @param value1
+	 *            value of first entry
+	 * @param key2
+	 *            key of second entry
+	 * @param value2
+	 *            value of second entry
+	 * @return map
+	 */
+	public static <K, V> Map<K, V> of(K key1, V value1, K key2, V value2)
+	{
+		MiniMap<K, V> map = new MiniMap<>(2);
+
+		map.put(key1, value1);
+		map.put(key2, value2);
+
+		return map;
+	}
+
+	/**
+	 * A map with two entries.
+	 * 
+	 * @param key1
+	 *            key of first entry
+	 * @param value1
+	 *            value of first entry
+	 * @param key2
+	 *            key of second entry
+	 * @param value2
+	 *            value of second entry
+	 * @param key3
+	 *            key of third entry
+	 * @param value3
+	 *            value of third entry
+	 * @return map
+	 */
+	public static <K, V> Map<K, V> of(K key1, V value1, K key2, V value2, K key3, V value3)
+	{
+		MiniMap<K, V> map = new MiniMap<>(3);
+
+		map.put(key1, value1);
+		map.put(key2, value2);
+		map.put(key3, value3);
+
+		return map;
+	}
+
+	/**
+	 * A map with two entries.
+	 * 
+	 * @param key1
+	 *            key of first entry
+	 * @param value1
+	 *            value of first entry
+	 * @param key2
+	 *            key of second entry
+	 * @param value2
+	 *            value of second entry
+	 * @param key3
+	 *            key of third entry
+	 * @param value3
+	 *            value of third entry
+	 * @param key4
+	 *            key of third entry
+	 * @param value4
+	 *            value of third entry
+	 * @return map
+	 */
+	public static <K, V> Map<K, V> of(K key1, V value1, K key2, V value2, K key3, V value3, K key4,
+		V value4)
+	{
+		MiniMap<K, V> map = new MiniMap<>(4);
+
+		map.put(key1, value1);
+		map.put(key2, value2);
+		map.put(key3, value3);
+		map.put(key4, value4);
+
+		return map;
+	}
+
 }
