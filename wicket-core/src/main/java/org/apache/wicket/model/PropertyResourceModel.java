@@ -30,7 +30,6 @@ import org.apache.wicket.resource.loader.ComponentStringResourceLoader;
 import org.apache.wicket.util.collections.MicroMap;
 import org.apache.wicket.util.lang.Args;
 
-
 /**
  * This model class encapsulates the full power of localization support within the Wicket framework.
  * It combines the flexible Wicket resource loading mechanism with property expressions. This
@@ -71,13 +70,7 @@ import org.apache.wicket.util.lang.Args;
  * In its simplest form, the model can be used as follows:
  * 
  * <pre>
- * public class MyPage extends WebPage&lt;Void&gt;
- * {
- * 	public MyPage(final PageParameters parameters)
- * 	{
- * 		add(new Label(&quot;username&quot;, new PropertyResourceModel(&quot;label.username&quot;, this, null)));
- * 	}
- * }
+ * add(new Label(&quot;username&quot;, new PropertyResourceModel(&quot;label.username&quot;, this, null)));
  * </pre>
  * 
  * Where the resource bundle for the page contains the entry <code>label.username=Username</code>
@@ -87,19 +80,13 @@ import org.apache.wicket.util.lang.Args;
  * In this example, the resource key is selected based on the evaluation of a property expression:
  * 
  * <pre>
- * public class MyPage extends WebPage&lt;Void&gt;
- * {
- * 	public MyPage(final PageParameters parameters)
- *     {
- *         WeatherStation ws = new WeatherStation();
- *         add(new Label(&quot;weatherMessage&quot;,
- *             new PropertyResourceModel(&quot;weather.${currentStatus}&quot;, this, new Model&lt;WeatherStation&gt;(ws)));
- *     }
- * }
+ * WeatherStation ws = new WeatherStation();
+ * add(new Label(&quot;weatherMessage&quot;,
+ *     new PropertyResourceModel(&quot;weather.${currentStatus}&quot;, this, new Model&lt;WeatherStation&gt;(ws)));
  * </pre>
  * 
- * Which will call the WeatherStation.getCurrentStatus() method each time the string resource model
- * is used and where the resource bundle for the page contains the entries:
+ * Which will call the WeatherStation.getCurrentStatus() method each time the property resource
+ * model is used and where the resource bundle for the page contains the entries:
  * 
  * <pre>
  * weather.sunny=Don't forget sunscreen!
@@ -115,39 +102,32 @@ import org.apache.wicket.util.lang.Args;
  * the model:
  * 
  * <pre>
- * public class MyPage extends WebPage&lt;Void&gt;
- * {
- * 	public MyPage(final PageParameters parameters)
- *     {
- *         WeatherStation ws = new WeatherStation();
- *         add(new Label(&quot;weatherMessage&quot;,
- *             new PropertyResourceModel(&quot;weather.message&quot;, this, new Model&lt;WeatherStation&gt;(ws)));
- *     }
- * }
+ * WeatherStation ws = new WeatherStation();
+ * 
+ * add(new Label(&quot;weatherMessage&quot;,
+ *     new PropertyResourceModel(&quot;weather.message&quot;, this, new Model&lt;WeatherStation&gt;(ws)));
  * </pre>
  * 
- * Where the resource bundle contains the entry <code>weather.message=Weather station reports that
- * the temperature is ${currentTemperature} ${units}</code>
+ * Where the resource bundle contains the entry:
+ * 
+ * <pre>
+ * weather.message=Weather station reports that the temperature is ${currentTemperature} ${units}
+ * </pre>
+ * 
  * <p>
  * <b>Example 4 </b>
  * <p>
- * This is an example of the most complex and powerful use of the string resource model with
+ * This is an example of the most complex and powerful use of the property resource model with
  * multiple nested models:
  * 
  * <pre>
- * public class MyPage extends WebPage&lt;Void&gt;
- * {
- * 	public MyPage(final PageParameters parameters)
- * 	{
- * 		WeatherStation ws = new WeatherStation();
+ * WeatherStation ws = new WeatherStation();
  * 
- * 		Map&lt;String, IModel&lt;?&gt;&gt; models = new HashMap&lt;&gt;();
- * 		models.put(&quot;date&quot;, Model.of(new Date()));
- * 		models.put(&quot;currentStatus&quot;, new PropertyModel&lt;?&gt;(ws, &quot;currentStatus&quot;));
- * 		models.put(&quot;ws&quot;, Model.of(ws));
- * 		add(new Label(&quot;weatherMessage&quot;, new PropertyResourceModel(&quot;weather.detail&quot;, this, models)));
- * 	}
- * }
+ * Map&lt;String, IModel&lt;?&gt;&gt; models = new HashMap&lt;&gt;();
+ * models.put(&quot;date&quot;, Model.of(new Date()));
+ * models.put(&quot;currentStatus&quot;, new PropertyModel&lt;?&gt;(ws, &quot;currentStatus&quot;));
+ * models.put(&quot;ws&quot;, Model.of(ws));
+ * add(new Label(&quot;weatherMessage&quot;, new PropertyResourceModel(&quot;weather.detail&quot;, this, models)));
  * </pre>
  * 
  * In the resource bundle all property expressions are prefixed with the identifier of the
@@ -253,7 +233,7 @@ public class PropertyResourceModel extends LoadableDetachableModel<String>
 	}
 
 	/**
-	 * Creates a new string resource model using the supplied parameters.
+	 * Creates a new property resource model using the supplied parameters.
 	 * 
 	 * @param resourceKey
 	 *            The resource key for this string resource
@@ -267,7 +247,7 @@ public class PropertyResourceModel extends LoadableDetachableModel<String>
 
 
 	/**
-	 * Creates a new string resource model using the supplied parameters.
+	 * Creates a new property resource model using the supplied parameters.
 	 * <p>
 	 * The relative component parameter should generally be supplied, as without it resources can
 	 * not be obtained from resource bundles that are held relative to a particular component or
@@ -288,7 +268,7 @@ public class PropertyResourceModel extends LoadableDetachableModel<String>
 	}
 
 	/**
-	 * Creates a new string resource model using the supplied parameters.
+	 * Creates a new property resource model using the supplied parameters.
 	 * 
 	 * @param resourceKey
 	 *            The resource key for this string resource
@@ -304,7 +284,7 @@ public class PropertyResourceModel extends LoadableDetachableModel<String>
 	}
 
 	/**
-	 * Creates a new string resource model using the supplied parameters.
+	 * Creates a new property resource model using the supplied parameters.
 	 * <p>
 	 * The relative component parameter should generally be supplied, as without it resources can
 	 * not be obtained from resource bundles that are held relative to a particular component or
@@ -327,7 +307,7 @@ public class PropertyResourceModel extends LoadableDetachableModel<String>
 	}
 
 	/**
-	 * Creates a new string resource model using the supplied parameters.
+	 * Creates a new property resource model using the supplied parameters.
 	 * <p>
 	 * The relative component parameter should generally be supplied, as without it resources can
 	 * not be obtained from resource bundles that are held relative to a particular component or
@@ -357,7 +337,7 @@ public class PropertyResourceModel extends LoadableDetachableModel<String>
 
 
 	/**
-	 * Gets the localizer that is being used by this string resource model.
+	 * Gets the localizer that is being used by this property resource model.
 	 * 
 	 * @return The localizer
 	 */
@@ -369,7 +349,7 @@ public class PropertyResourceModel extends LoadableDetachableModel<String>
 	/**
 	 * Gets the string currently represented by this model. The string that is returned may vary for
 	 * each call to this method depending on the values contained in the model and an the parameters
-	 * that were passed when this string resource model was created.
+	 * that were passed when this property resource model was created.
 	 * 
 	 * @return The string
 	 */
@@ -429,6 +409,7 @@ public class PropertyResourceModel extends LoadableDetachableModel<String>
 	{
 		if (models == null)
 		{
+			// no models, no target
 			return null;
 		}
 		else if (models instanceof MicroMap)
@@ -441,6 +422,8 @@ public class PropertyResourceModel extends LoadableDetachableModel<String>
 			// a wrapper which returns the object contained in each model
 			return new AbstractReadOnlyModel<Map<String, Object>>()
 			{
+				private static final long serialVersionUID = 1L;
+
 				@Override
 				public Map<String, Object> getObject()
 				{
@@ -470,6 +453,9 @@ public class PropertyResourceModel extends LoadableDetachableModel<String>
 							return models.containsValue(value);
 						}
 
+						/**
+						 * Return the model object.
+						 */
 						@Override
 						public Object get(Object key)
 						{
@@ -508,7 +494,7 @@ public class PropertyResourceModel extends LoadableDetachableModel<String>
 						@Override
 						public Set<String> keySet()
 						{
-							return models.keySet();
+							throw new UnsupportedOperationException();
 						}
 
 						@Override
@@ -550,7 +536,7 @@ public class PropertyResourceModel extends LoadableDetachableModel<String>
 	}
 
 	/**
-	 * Gets the string that this string resource model currently represents.
+	 * Gets the string that this property resource model currently represents.
 	 * <p>
 	 * Note: This method is used only if this model is used directly without assignment to a
 	 * component, it is not called by the assignment wrapper returned from
@@ -581,6 +567,11 @@ public class PropertyResourceModel extends LoadableDetachableModel<String>
 		}
 	}
 
+	/**
+	 * Unsupported operation.
+	 * 
+	 * @ŧhrows {@link UnsupportedOperationException} always
+	 */
 	@Override
 	public void setObject(String object)
 	{
