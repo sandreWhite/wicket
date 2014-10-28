@@ -84,7 +84,7 @@ import org.slf4j.LoggerFactory;
  * It is possible to switch between logging a warning and throwing an exception if either the
  * property key/value or any of the variables can not be found.
  *
- * @see org.apache.wicket.settings.IResourceSettings#setThrowExceptionOnMissingResource(boolean)
+ * @see org.apache.wicket.settings.ResourceSettings#setThrowExceptionOnMissingResource(boolean)
  * @author Juergen Donnerstag
  * @author John Ray
  */
