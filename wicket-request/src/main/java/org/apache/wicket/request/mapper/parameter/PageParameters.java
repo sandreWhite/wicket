@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.TreeSet;
 
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.wicket.request.IRequestMapper;
 import org.apache.wicket.util.io.IClusterable;
 import org.apache.wicket.util.lang.Args;
@@ -273,6 +274,13 @@ public class PageParameters implements IClusterable, IIndexedParameters, INamedP
 		return this;
 	}
 
+	/**
+	 * Adds a page parameter to these with {@code name} and {@code value}
+	 * 
+	 * @param name
+	 * @param value
+	 * @return these
+	 */
 	public PageParameters add(final String name, final Object value)
 	{
 		return add(name, value, Type.MANUAL);
@@ -321,6 +329,14 @@ public class PageParameters implements IClusterable, IIndexedParameters, INamedP
 		return this;
 	}
 
+	/**
+	 * Sets the page parameter with {@code name} and {@code value} at the given {@code index}
+	 * 
+	 * @param name
+	 * @param value
+	 * @param index
+	 * @return this
+	 */
 	public PageParameters set(final String name, final Object value, final int index)
 	{
 		return set(name, value, index, Type.MANUAL);
@@ -338,6 +354,13 @@ public class PageParameters implements IClusterable, IIndexedParameters, INamedP
 		return this;
 	}
 
+	/**
+	 * Sets the page parameter with {@code name} and {@code value}
+	 * 
+	 * @param name
+	 * @param value
+	 * @return this
+	 */
 	public PageParameters set(final String name, final Object value)
 	{
 		return set(name, value, Type.MANUAL);
@@ -444,7 +467,9 @@ public class PageParameters implements IClusterable, IIndexedParameters, INamedP
 			if (other.namedParameters != null)
 				return false;
 		}
-		else if (!namedParameters.equals(other.namedParameters))
+		else if (other.namedParameters == null)
+			return false;
+		else if (!CollectionUtils.isEqualCollection(namedParameters, other.namedParameters))
 			return false;
 		return true;
 	}

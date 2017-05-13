@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
  * A ServerEndpointConfig that uses custom Configurator to collect
  * all available information from the passed HandshakeRequest
  */
-class WicketServerEndpointConfig implements ServerEndpointConfig
+public class WicketServerEndpointConfig implements ServerEndpointConfig
 {
 	/**
 	 * A fake mount path used for WebSocket endpoint.
@@ -48,7 +48,7 @@ class WicketServerEndpointConfig implements ServerEndpointConfig
 
 	private Configurator configurator;
 
-	WicketServerEndpointConfig()
+	public WicketServerEndpointConfig()
 	{
 		this.delegate = ServerEndpointConfig.Builder.create(WicketEndpoint.class, WICKET_WEB_SOCKET_PATH).build();
 	}

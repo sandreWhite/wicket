@@ -21,6 +21,7 @@ import java.nio.charset.Charset;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.Locale;
+import java.util.function.Function;
 
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
@@ -28,7 +29,6 @@ import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
 import org.apache.wicket.Application;
-import org.apache.wicket.IPageRendererProvider;
 import org.apache.wicket.Page;
 import org.apache.wicket.RuntimeConfigurationType;
 import org.apache.wicket.Session;
@@ -36,7 +36,6 @@ import org.apache.wicket.WicketRuntimeException;
 import org.apache.wicket.ajax.AjaxRequestHandler;
 import org.apache.wicket.ajax.AjaxRequestTarget;
 import org.apache.wicket.ajax.AjaxRequestTargetListenerCollection;
-import org.apache.wicket.core.request.handler.RenderPageRequestHandler;
 import org.apache.wicket.core.request.mapper.MountedMapper;
 import org.apache.wicket.core.request.mapper.PackageMapper;
 import org.apache.wicket.core.request.mapper.ResourceMapper;
@@ -62,7 +61,6 @@ import org.apache.wicket.request.Request;
 import org.apache.wicket.request.Response;
 import org.apache.wicket.request.Url;
 import org.apache.wicket.request.cycle.RequestCycle;
-import org.apache.wicket.request.handler.render.PageRenderer;
 import org.apache.wicket.request.handler.render.WebPageRenderer;
 import org.apache.wicket.request.http.WebRequest;
 import org.apache.wicket.request.http.WebResponse;
@@ -73,9 +71,6 @@ import org.apache.wicket.request.resource.JavaScriptResourceReference;
 import org.apache.wicket.request.resource.ResourceReference;
 import org.apache.wicket.resource.bundles.ReplacementResourceBundleReference;
 import org.apache.wicket.session.HttpSessionStore;
-import org.apache.wicket.session.ISessionStore;
-import org.apache.wicket.util.IContextProvider;
-import org.apache.wicket.util.IProvider;
 import org.apache.wicket.util.crypt.CharEncoding;
 import org.apache.wicket.util.file.FileCleaner;
 import org.apache.wicket.util.file.IFileCleaner;
@@ -140,7 +135,7 @@ public abstract class WebApplication extends Application
 
 	private final AjaxRequestTargetListenerCollection ajaxRequestTargetListeners;
 
-	private IContextProvider<AjaxRequestTarget, Page> ajaxRequestTargetProvider;
+	private Function<Page, AjaxRequestTarget> ajaxRequestTargetProvider;
 
 	private FilterFactoryManager filterFactoryManager;
 
@@ -553,19 +548,28 @@ public abstract class WebApplication extends Application
 	 * {@link #newWebRequest(HttpServletRequest, String)}
 	 * 
 	 * @param servletRequest
-	 *            the current HTTP Sservlet request
+	 *            the current HTTP Servlet request
 	 * @param filterPath
 	 *            the filter mapping read from web.xml
 	 * @return a WebRequest object
 	 */
 	WebRequest createWebRequest(HttpServletRequest servletRequest, final String filterPath)
 	{
+		if (hasFilterFactoryManager())
+		{
+			for (AbstractRequestWrapperFactory factory : getFilterFactoryManager())
+			{
+				servletRequest = factory.getWrapper(servletRequest);
+			}
+		}
+
+		WebRequest webRequest = newWebRequest(servletRequest, filterPath);
+
 		if (servletRequest.getCharacterEncoding() == null)
 		{
 			try
 			{
-				String wicketAjaxHeader = servletRequest.getHeader(WebRequest.HEADER_AJAX);
-				if (Strings.isTrue(wicketAjaxHeader))
+				if (webRequest.isAjax())
 				{
 					// WICKET-3908, WICKET-1816: Forms submitted with Ajax are always UTF-8 encoded
 					servletRequest.setCharacterEncoding(CharEncoding.UTF_8);
@@ -581,16 +585,6 @@ public abstract class WebApplication extends Application
 				throw new WicketRuntimeException(e);
 			}
 		}
-
-		if (hasFilterFactoryManager())
-		{
-			for (AbstractRequestWrapperFactory factory : getFilterFactoryManager())
-			{
-				servletRequest = factory.getWrapper(servletRequest);
-			}
-		}
-
-		WebRequest webRequest = newWebRequest(servletRequest, filterPath);
 
 		return webRequest;
 	}
@@ -748,9 +742,9 @@ public abstract class WebApplication extends Application
 				getResourceSettings().getResourceFinders().add(new Path(resourceFolder));
 			}
 		}
-		setPageRendererProvider(new WebPageRendererProvider());
-		setSessionStoreProvider(new WebSessionStoreProvider());
-		setAjaxRequestTargetProvider(new DefaultAjaxRequestTargetProvider());
+		setPageRendererProvider(WebPageRenderer::new);
+		setSessionStoreProvider(HttpSessionStore::new);
+		setAjaxRequestTargetProvider(AjaxRequestHandler::new);
 
 		getAjaxRequestTargetListeners().add(new AjaxEnclosureListener());
 
@@ -904,7 +898,7 @@ public abstract class WebApplication extends Application
 	 */
 	public final AjaxRequestTarget newAjaxRequestTarget(final Page page)
 	{
-		AjaxRequestTarget target = getAjaxRequestTargetProvider().get(page);
+		AjaxRequestTarget target = getAjaxRequestTargetProvider().apply(page);
 		for (AjaxRequestTarget.IListener listener : ajaxRequestTargetListeners)
 		{
 			target.addListener(listener);
@@ -978,7 +972,7 @@ public abstract class WebApplication extends Application
 	 * @param url
 	 *          The url used as a key
 	 * @return the stored buffered response. {@code null} if there is no stored response for the given url
-	 * @see org.apache.wicket.settings.IRequestCycleSettings.RenderStrategy#REDIRECT_TO_BUFFER
+	 * @see org.apache.wicket.settings.RequestCycleSettings.RenderStrategy#REDIRECT_TO_BUFFER
 	 */
 	public BufferedWebResponse getAndRemoveBufferedResponse(String sessionId, Url url)
 	{
@@ -1013,30 +1007,12 @@ public abstract class WebApplication extends Application
 		return mimeType != null ? mimeType : super.getMimeType(fileName);
 	}
 
-	private static class WebPageRendererProvider implements IPageRendererProvider
-	{
-		@Override
-		public PageRenderer get(RenderPageRequestHandler handler)
-		{
-			return new WebPageRenderer(handler);
-		}
-	}
-
-	private static class WebSessionStoreProvider implements IProvider<ISessionStore>
-	{
-		@Override
-		public ISessionStore get()
-		{
-			return new HttpSessionStore();
-		}
-	}
-
 	/**
 	 * Returns the provider for {@link org.apache.wicket.ajax.AjaxRequestTarget} objects.
 	 * 
 	 * @return the provider for {@link org.apache.wicket.ajax.AjaxRequestTarget} objects.
 	 */
-	public IContextProvider<AjaxRequestTarget, Page> getAjaxRequestTargetProvider()
+	public Function<Page, AjaxRequestTarget> getAjaxRequestTargetProvider()
 	{
 		return ajaxRequestTargetProvider;
 	}
@@ -1048,7 +1024,7 @@ public abstract class WebApplication extends Application
 	 *            the new provider
 	 */
 	public Application setAjaxRequestTargetProvider(
-		IContextProvider<AjaxRequestTarget, Page> ajaxRequestTargetProvider)
+		Function<Page, AjaxRequestTarget> ajaxRequestTargetProvider)
 	{
 		this.ajaxRequestTargetProvider = ajaxRequestTargetProvider;
 		return this;
@@ -1062,16 +1038,6 @@ public abstract class WebApplication extends Application
 	public AjaxRequestTargetListenerCollection getAjaxRequestTargetListeners()
 	{
 		return ajaxRequestTargetListeners;
-	}
-
-	private static class DefaultAjaxRequestTargetProvider implements
-		IContextProvider<AjaxRequestTarget, Page>
-	{
-		@Override
-		public AjaxRequestTarget get(Page page)
-		{
-			return new AjaxRequestHandler(page);
-		}
 	}
 
 	/**

@@ -156,6 +156,19 @@ public class PageStoreManager extends AbstractPageManager
 			}
 		}
 
+		private synchronized void removePage(IManageablePage page)
+		{
+			if (page != null)
+			{
+				sessionCache.remove(page);
+				final IPageStore pageStore = getPageStore();
+				if (pageStore != null)
+				{
+					pageStore.removePage(sessionId, page.getPageId());
+				}
+			}
+		}
+
 		/**
 		 * If the pages are stored in temporary state (after deserialization) this method convert
 		 * them to list of "real" pages
@@ -167,10 +180,14 @@ public class PageStoreManager extends AbstractPageManager
 				sessionCache = new ArrayList<>();
 			}
 
-			for (Object o : afterReadObject)
+			final IPageStore pageStore = getPageStore();
+			if (pageStore != null)
 			{
-				IManageablePage page = getPageStore().convertToPage(o);
-				addPage(page);
+				for (Object o : afterReadObject)
+				{
+					IManageablePage page = pageStore.convertToPage(o);
+					addPage(page);
+				}
 			}
 
 			afterReadObject = null;
@@ -189,10 +206,11 @@ public class PageStoreManager extends AbstractPageManager
 				convertAfterReadObjects();
 			}
 
+			IManageablePage page = null;
 			// try to find page with same id
 			if (sessionCache != null)
 			{
-				IManageablePage page = findPage(id);
+				page = findPage(id);
 				if (page != null)
 				{
 					return page;
@@ -200,7 +218,12 @@ public class PageStoreManager extends AbstractPageManager
 			}
 
 			// not found, ask pagestore for the page
-			return getPageStore().getPage(sessionId, id);
+			final IPageStore pageStore = getPageStore();
+			if (pageStore != null)
+			{
+				page = pageStore.getPage(sessionId, id);
+			}
+			return page;
 		}
 
 		/**
@@ -362,6 +385,15 @@ public class PageStoreManager extends AbstractPageManager
 			}
 		}
 
+		@Override
+		protected void removePage(final IManageablePage page) {
+			final SessionEntry sessionEntry = getSessionEntry(false);
+			if (sessionEntry != null)
+			{
+				sessionEntry.removePage(page);
+			}
+		}
+
 		/**
 		 * 
 		 * @param create
@@ -369,13 +401,11 @@ public class PageStoreManager extends AbstractPageManager
 		 */
 		private SessionEntry getSessionEntry(boolean create)
 		{
-			String attributeName = getAttributeName();
-			SessionEntry entry = (SessionEntry)getSessionAttribute(attributeName);
+			SessionEntry entry = (SessionEntry)getSessionAttribute(getAttributeName());
 			if (entry == null && create)
 			{
 				bind();
 				entry = new SessionEntry(applicationName, getSessionId());
-				setSessionAttribute(attributeName, entry);
 			}
 			return entry;
 		}
@@ -402,6 +432,7 @@ public class PageStoreManager extends AbstractPageManager
 					// WICKET-5103 use the same sessionId as used in SessionEntry#getPage()
 					pageStore.storePage(entry.sessionId, page);
 				}
+				setSessionAttribute(getAttributeName(), entry);
 			}
 		}
 	}

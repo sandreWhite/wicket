@@ -17,6 +17,12 @@
 package org.apache.wicket.model;
 
 
+import org.apache.wicket.util.lang.Args;
+import org.danekja.java.util.function.serializable.SerializableBiFunction;
+import org.danekja.java.util.function.serializable.SerializableFunction;
+import org.danekja.java.util.function.serializable.SerializablePredicate;
+import org.danekja.java.util.function.serializable.SerializableSupplier;
+
 /**
  * A IModel wraps the actual model Object used by a Component. IModel implementations are used as a
  * facade for the real model so that users have control over the actual persistence strategy. Note
@@ -54,6 +60,7 @@ package org.apache.wicket.model;
  * @param <T>
  *            Model object.
  */
+@FunctionalInterface
 public interface IModel<T> extends IDetachable
 {
 	/**
@@ -65,9 +72,230 @@ public interface IModel<T> extends IDetachable
 
 	/**
 	 * Sets the model object.
-	 * 
+	 *
 	 * @param object
 	 *            The model object
+	 * @throws UnsupportedOperationException
+	 *             unless overridden
 	 */
-	void setObject(final T object);
+	default void setObject(final T object)
+	{
+		throw new UnsupportedOperationException(
+			"Override this method to support setObject(Object)");
+	}
+
+	@Override
+	default void detach()
+	{
+	}
+
+	/**
+	 * Returns a IModel checking whether the predicate holds for the contained object, if it is not
+	 * {@code null}. If the predicate doesn't evaluate to {@code true}, the contained object will be {@code null}.
+	 *
+	 * @param predicate
+	 *            a predicate to be used for testing the contained object
+	 * @return a new IModel
+	 */
+	default IModel<T> filter(SerializablePredicate<? super T> predicate)
+	{
+		Args.notNull(predicate, "predicate");
+		return (IModel<T>)() -> {
+			T object = IModel.this.getObject();
+			if (object != null && predicate.test(object))
+			{
+				return object;
+			}
+			else
+			{
+				return null;
+			}
+		};
+	}
+
+	/**
+	 * Returns a IModel applying the given mapper to the contained object, if it is not {@code null}.
+	 *
+	 * @param <R>
+	 *            the new type of the contained object
+	 * @param mapper
+	 *            a mapper, to be applied to the contained object
+	 * @return a new IModel
+	 */
+	default <R> IModel<R> map(SerializableFunction<? super T, R> mapper)
+	{
+		Args.notNull(mapper, "mapper");
+		return (IModel<R>)() -> {
+			T object = IModel.this.getObject();
+			if (object == null)
+			{
+				return null;
+			}
+			else
+			{
+				return mapper.apply(object);
+			}
+		};
+	}
+
+	/**
+	 * Returns a {@link IModel} applying the given combining function to the current model object and
+	 * to the one from the other model, if they are not {@code null}.
+	 *
+	 * @param <R>
+	 *            the resulting type
+	 * @param <U>
+	 *            the other models type
+	 * @param other
+	 *            another model to be combined with this one
+	 * @param combiner
+	 *            a function combining this and the others object to a result.
+	 * @return a new IModel
+	 */
+	default <R, U> IModel<R> combineWith(IModel<U> other,
+		SerializableBiFunction<? super T, ? super U, R> combiner)
+	{
+		Args.notNull(combiner, "combiner");
+		Args.notNull(other, "other");
+		return (IModel<R>)() -> {
+			T t = IModel.this.getObject();
+			U u = other.getObject();
+			if (t != null && u != null)
+			{
+				return combiner.apply(t, u);
+			}
+			else
+			{
+				return null;
+			}
+		};
+	}
+
+	/**
+	 * Returns a IModel applying the given IModel-bearing mapper to the contained object, if it is not {@code null}.
+	 *
+	 * @param <R>
+	 *            the new type of the contained object
+	 * @param mapper
+	 *            a mapper, to be applied to the contained object
+	 * @return a new IModel
+	 */
+	default <R> IModel<R> flatMap(SerializableFunction<? super T, IModel<R>> mapper)
+	{
+		Args.notNull(mapper, "mapper");
+		return new IModel<R>()
+		{
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			public R getObject()
+			{
+				T object = IModel.this.getObject();
+				if (object != null)
+				{
+					IModel<R> model = mapper.apply(object);
+					if (model != null) 
+					{
+						return model.getObject();
+					}
+					else 
+					{
+						return null;
+					}
+				}
+				else
+				{
+					return null;
+				}
+			}
+
+			@Override
+			public void setObject(R object)
+			{
+				T modelObject = IModel.this.getObject();
+				if (modelObject != null)
+				{
+					IModel<R> model = mapper.apply(modelObject);
+					if (model != null)
+					{
+						model.setObject(object);
+					}
+				}
+			}
+
+			@Override
+			public void detach()
+			{
+				T object = IModel.this.getObject();
+				if (object != null)
+				{
+					IModel<R> model = mapper.apply(object);
+					if (model != null)
+					{
+						model.detach();
+					}
+				}
+			}
+		};
+	}
+
+	/**
+	 * Returns a IModel, returning either the contained object or the given default value, depending
+	 * on the {@code null}ness of the contained object.
+	 *
+	 * @param other
+	 *            a default value
+	 * @return a new IModel
+	 */
+	default IModel<T> orElse(T other)
+	{
+		return (IModel<T>)() -> {
+			T object = IModel.this.getObject();
+			if (object == null)
+			{
+				return other;
+			}
+			else
+			{
+				return object;
+			}
+		};
+	}
+
+	/**
+	 * Returns a IModel, returning either the contained object or invoking the given supplier to get
+	 * a default value.
+	 *
+	 * @param other
+	 *            a supplier to be used as a default
+	 * @return a new IModel
+	 */
+	default IModel<T> orElseGet(SerializableSupplier<? extends T> other)
+	{
+		Args.notNull(other, "other");
+		return (IModel<T>)() -> {
+			T object = IModel.this.getObject();
+			if (object == null)
+			{
+				return other.get();
+			}
+			else
+			{
+				return object;
+			}
+		};
+	}
+
+	/**
+	 * Suppresses generics warning when casting model types.
+	 *
+	 * @param <T>
+	 * @param model
+	 * @return cast <code>model</code>
+	 */
+	@SuppressWarnings("unchecked")
+	static <T> IModel<T> of(IModel<?> model)
+	{
+		return (IModel<T>)model;
+	}
 }

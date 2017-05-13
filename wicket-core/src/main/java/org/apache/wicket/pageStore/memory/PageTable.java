@@ -16,6 +16,7 @@
  */
 package org.apache.wicket.pageStore.memory;
 
+import java.util.Iterator;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -32,7 +33,6 @@ import org.apache.wicket.util.io.IClusterable;
 public class PageTable implements IClusterable
 {
 	private static final long serialVersionUID = 1L;
-
 
 	/**
 	 * Holds the index of last/least recently used page ids. The most recently used page id is in
@@ -105,6 +105,11 @@ public class PageTable implements IClusterable
 	public Integer getOldest()
 	{
 		return index.peek();
+	}
+
+	public Iterator<Integer> indexIterator()
+	{
+		return index.iterator();
 	}
 
 	/**

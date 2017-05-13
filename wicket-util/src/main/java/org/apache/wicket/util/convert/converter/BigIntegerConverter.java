@@ -16,15 +16,16 @@
  */
 package org.apache.wicket.util.convert.converter;
 
+import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.Locale;
 
-import org.apache.wicket.util.string.Strings;
+import org.apache.wicket.util.convert.IConverter;
 
 /**
  * BigInteger converter
  * 
- * see IConverter
+ * see {@link IConverter}
  */
 public class BigIntegerConverter extends AbstractIntegerConverter<BigInteger>
 {
@@ -39,28 +40,13 @@ public class BigIntegerConverter extends AbstractIntegerConverter<BigInteger>
 	@Override
 	public BigInteger convertToObject(final String value, final Locale locale)
 	{
-		if (Strings.isEmpty(value))
+		final BigDecimal number = parse(value, null, null, locale);
+
+		if (number == null)
 		{
 			return null;
 		}
 
-		final Number number = parse(value, -Double.MAX_VALUE, Double.MAX_VALUE, locale);
-
-		if (number instanceof BigInteger)
-		{
-			return (BigInteger)number;
-		}
-		else if (number instanceof Long)
-		{
-			return BigInteger.valueOf(number.longValue());
-		}
-		else if (number instanceof Integer)
-		{
-			return BigInteger.valueOf(number.intValue());
-		}
-		else
-		{
-			return new BigInteger(value);
-		}
+		return number.toBigInteger();
 	}
 }

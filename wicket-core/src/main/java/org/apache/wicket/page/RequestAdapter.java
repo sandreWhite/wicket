@@ -18,6 +18,7 @@ package org.apache.wicket.page;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -55,6 +56,15 @@ public abstract class RequestAdapter
 	 * @return page instance or <code>null</code> if the page does not exist.
 	 */
 	protected abstract IManageablePage getPage(int id);
+
+	/**
+	 * Removes a page from the cache and the stores ({@link org.apache.wicket.pageStore.IPageStore} and
+	 * {@link org.apache.wicket.pageStore.IDataStore}). Any attempt to access it later
+	 * will lead to {@link org.apache.wicket.protocol.http.PageExpiredException}
+	 *
+	 * @param page The page instance to remove
+	 */
+	protected abstract void removePage(final IManageablePage page);
 
 	/**
 	 * Store the list of stateful pages.
@@ -128,14 +138,34 @@ public abstract class RequestAdapter
 	}
 
 	/**
-	 * 
-	 * @param page
+	 * Touches a page, so it will be stored in the page stores
+	 * at the end of the request cycle
+	 *
+	 * @param page The page to mark as dirty
 	 */
 	protected void touch(final IManageablePage page)
 	{
 		if (findPage(page.getPageId()) == null)
 		{
 			touchedPages.add(page);
+		}
+	}
+
+	/**
+	 * @param page The page to unmark as dirty, so it won't be stored
+	 *                at the end of the request cycle
+	 */
+	protected void untouch(final IManageablePage page)
+	{
+		Iterator<IManageablePage> iterator = touchedPages.iterator();
+		while (iterator.hasNext())
+		{
+			IManageablePage touchedPage = iterator.next();
+			if (touchedPage.getPageId() == page.getPageId())
+			{
+				iterator.remove();
+				break;
+			}
 		}
 	}
 

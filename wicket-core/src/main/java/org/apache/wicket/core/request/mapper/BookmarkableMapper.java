@@ -42,7 +42,7 @@ import org.apache.wicket.util.string.Strings;
  *  Page Instance - Render Hybrid (RenderPageRequestHandler for pages that were created using bookmarkable URLs)
  *  /wicket/bookmarkable/org.apache.wicket.MyPage?2
  * 
- *  Page Instance - Bookmarkable Listener (BookmarkableListenerInterfaceRequestHandler)
+ *  Page Instance - Bookmarkable Listener (BookmarkableListenerRequestHandler)
  *  /wicket/bookmarkable/org.apache.wicket.MyPage?2-click-foo-bar-baz
  *  /wicket/bookmarkable/org.apache.wicket.MyPage?2-click.1-foo-bar-baz (1 is behavior index)
  *  (these will redirect to hybrid if page is not stateless)
@@ -86,6 +86,14 @@ public class BookmarkableMapper extends AbstractBookmarkableMapper
 	@Override
 	protected UrlInfo parseRequest(Request request)
 	{
+		if (Application.exists())
+		{
+			if (Application.get().getSecuritySettings().getEnforceMounts())
+			{
+				return null;
+			}
+		}
+
 		if (matches(request))
 		{
 			Url url = request.getUrl();
@@ -106,28 +114,15 @@ public class BookmarkableMapper extends AbstractBookmarkableMapper
 				className = segments.get(1);
 			}
 
+			if (Strings.isEmpty(className))
+			{
+				return null;
+			}
+
 			Class<? extends IRequestablePage> pageClass = getPageClass(className);
 
 			if (pageClass != null && IRequestablePage.class.isAssignableFrom(pageClass))
 			{
-				if (Application.exists())
-				{
-					Application application = Application.get();
-
-					if (application.getSecuritySettings().getEnforceMounts())
-					{
-						// we make an exception if the homepage itself was mounted, see WICKET-1898
-						if (!pageClass.equals(application.getHomePage()))
-						{
-							// WICKET-5094 only enforce mount if page is mounted
-							if (isPageMounted(pageClass, application.getRootRequestMapperAsCompound()))
-							{
-								return null;
-							}
-						}
-					}
-				}
-
 				// extract the PageParameters from URL if there are any
 				PageParameters pageParameters = extractPageParameters(request, 3,
 					pageParametersEncoder);

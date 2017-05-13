@@ -55,7 +55,7 @@ public final class FeedbackMessages implements IClusterable, Iterable<FeedbackMe
 	 */
 	public FeedbackMessages()
 	{
-		messages = new CopyOnWriteArrayList<FeedbackMessage>();
+		messages = new CopyOnWriteArrayList<>();
 	}
 
 	/**
@@ -190,7 +190,6 @@ public final class FeedbackMessages implements IClusterable, Iterable<FeedbackMe
 
 		List<FeedbackMessage> toDelete = messages(filter);
 
-
 		for (FeedbackMessage message : toDelete)
 		{
 			message.detach();
@@ -254,11 +253,11 @@ public final class FeedbackMessages implements IClusterable, Iterable<FeedbackMe
 	}
 
 	/**
-	 * Retrieves the first message matching the specified {@code level}
+	 * Retrieves the first message that level is greater than or equal to the given level
 	 * 
 	 * @param level
-	 *            The level of the message
-	 * @return matching message or {@code null} if none
+	 *            The minimum level of the message
+	 * @return a message with the same or a higher level, or {@code null} if none
 	 */
 	public final FeedbackMessage first(final int level)
 	{

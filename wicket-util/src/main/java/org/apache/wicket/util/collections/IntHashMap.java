@@ -23,7 +23,6 @@ import java.util.AbstractSet;
 import java.util.Collection;
 import java.util.ConcurrentModificationException;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -1036,7 +1035,7 @@ public class IntHashMap<V> implements Cloneable, Serializable
 	 * operations. It does not support the <tt>add</tt> or <tt>addAll</tt> operations.
 	 * 
 	 * @return a collection view of the mappings contained in this map.
-	 * @see Map.Entry
+	 * @see java.util.Map.Entry
 	 */
 	public Set<Entry<V>> entrySet()
 	{
@@ -1145,6 +1144,8 @@ public class IntHashMap<V> implements Cloneable, Serializable
 	private void readObject(final java.io.ObjectInputStream s) throws IOException,
 		ClassNotFoundException
 	{
+		modCount = new AtomicInteger(0);
+
 		// Read in the threshold, loadfactor, and any hidden stuff
 		s.defaultReadObject();
 

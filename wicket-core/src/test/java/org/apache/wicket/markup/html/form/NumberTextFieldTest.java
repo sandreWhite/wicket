@@ -20,13 +20,13 @@ import java.math.BigDecimal;
 import java.util.Locale;
 
 import org.apache.wicket.MarkupContainer;
-import org.apache.wicket.WicketTestCase;
 import org.apache.wicket.markup.IMarkupResourceStreamProvider;
 import org.apache.wicket.markup.html.WebPage;
 import org.apache.wicket.model.Model;
 import org.apache.wicket.util.resource.IResourceStream;
 import org.apache.wicket.util.resource.StringResourceStream;
 import org.apache.wicket.util.tester.FormTester;
+import org.apache.wicket.util.tester.WicketTestCase;
 import org.junit.Test;
 
 /**
@@ -43,9 +43,9 @@ public class NumberTextFieldTest extends WicketTestCase
 	@Test
 	public void convertBigDecimal()
 	{
-		TestPage<BigDecimal> testPage = new TestPage<BigDecimal>();
+		TestPage<BigDecimal> testPage = new TestPage<>();
 		testPage.textField.setType(BigDecimal.class);
-		testPage.textField.setMinimum(new BigDecimal("0.00"));
+		testPage.textField.setMinimum(Model.of(new BigDecimal("0.00")));
 		testPage.textField.setMaximum(new BigDecimal("100.00"));
 		testPage.textField.setModelObject(new BigDecimal("0.00"));
 		tester.startPage(testPage);
@@ -111,7 +111,7 @@ public class NumberTextFieldTest extends WicketTestCase
 	{
 		TestPage<Double> testPage = new TestPage<Double>();
 		testPage.textField.setType(Double.class);
-		testPage.textField.setStep(NumberTextField.ANY);
+		testPage.textField.setStep(Model.of(NumberTextField.ANY));
 		testPage.textField.setModelObject(new Double("1000.0"));
 		tester.startPage(testPage);
 

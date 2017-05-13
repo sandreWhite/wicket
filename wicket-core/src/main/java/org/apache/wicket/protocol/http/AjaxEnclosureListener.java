@@ -55,7 +55,7 @@ import org.apache.wicket.util.visit.IVisitor;
  *
  * @author Joonas Hamalainen
  */
-public class AjaxEnclosureListener extends AjaxRequestTarget.AbstractListener
+public class AjaxEnclosureListener implements AjaxRequestTarget.IListener
 {
 	/**
 	 * Construct.
@@ -70,7 +70,7 @@ public class AjaxEnclosureListener extends AjaxRequestTarget.AbstractListener
 	@Override
 	public void onBeforeRespond(final Map<String, Component> map, final AjaxRequestTarget target)
 	{
-		final List<String> keysToRemove = new ArrayList<String>();
+		final List<String> keysToRemove = new ArrayList<>();
 
 		target.getPage().visitChildren(InlineEnclosure.class, new IVisitor<InlineEnclosure, Void>()
 		{
@@ -85,7 +85,6 @@ public class AjaxEnclosureListener extends AjaxRequestTarget.AbstractListener
 					Component component = entry.getValue();
 					if (isControllerOfEnclosure(component, enclosure))
 					{
-						enclosure.updateVisibility();
 						target.add(enclosure);
 						visit.dontGoDeeper();
 						keysToRemove.add(componentId);

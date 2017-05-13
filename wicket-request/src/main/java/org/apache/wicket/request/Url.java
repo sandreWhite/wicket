@@ -290,7 +290,11 @@ public class Url implements Serializable
 			}
 
 			final int credentialsAt = hostAndPort.lastIndexOf('@') + 1;
-			final int portAt = hostAndPort.substring(credentialsAt).lastIndexOf(':');
+			//square brackets are used for ip6 URLs
+			final int closeSqrBracketAt = hostAndPort.lastIndexOf(']') + 1;
+			final int portAt = hostAndPort.substring(credentialsAt)
+										  .substring(closeSqrBracketAt)
+									      .lastIndexOf(':');
 
 			if (portAt == -1)
 			{
@@ -299,8 +303,10 @@ public class Url implements Serializable
 			}
 			else
 			{
-				result.host = hostAndPort.substring(0, portAt + credentialsAt);
-				result.port = Integer.parseInt(hostAndPort.substring(portAt + credentialsAt + 1));
+				final int portOffset = portAt + credentialsAt + closeSqrBracketAt;
+				
+				result.host = hostAndPort.substring(0, portOffset);
+				result.port = Integer.parseInt(hostAndPort.substring(portOffset + 1));
 			}
 
 			if (relativeAt < 0)
@@ -484,6 +490,17 @@ public class Url implements Serializable
 	public boolean isContextAbsolute()
 	{
 		return !isFull() && !getSegments().isEmpty() && Strings.isEmpty(getSegments().get(0));
+	}
+
+	/**
+	 * Returns whether the Url is a CSS data uri. Data uris start with '{@literal data:}'.
+	 *
+	 * @return <code>true</code> if Url starts with 'data:', <code>false</code> otherwise.
+	 */
+	public boolean isDataUrl()
+	{
+		return (getProtocol() != null && getProtocol().equals("data")) || (!getSegments().isEmpty() && getSegments()
+				.get(0).startsWith("data"));
 	}
 
 	/**

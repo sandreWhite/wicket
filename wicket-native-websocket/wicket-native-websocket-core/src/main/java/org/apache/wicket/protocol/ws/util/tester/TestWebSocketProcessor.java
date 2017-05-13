@@ -37,6 +37,20 @@ import org.apache.wicket.util.tester.WicketTester;
 abstract class TestWebSocketProcessor extends AbstractWebSocketProcessor
 {
 	/**
+	 *
+	 * Constructor.
+	 *
+	 * @param request
+	 *            the http request that was used to create the IWebSocketProcessor
+	 * @param application
+	 *            the current Wicket Application
+	 */
+	public TestWebSocketProcessor(final HttpServletRequest request, final WebApplication application)
+	{
+		super(request, application);
+	}
+
+	/**
 	 * Constructor.
 	 *
 	 * @param page

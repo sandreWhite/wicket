@@ -106,7 +106,7 @@ public class StringValue implements IClusterable
 	 */
 	public static StringValue valueOf(final double value)
 	{
-		return valueOf(value, Locale.getDefault());
+		return valueOf(value, Locale.getDefault(Locale.Category.FORMAT));
 	}
 
 	/**
@@ -308,6 +308,7 @@ public class StringValue implements IClusterable
 	 * @return The converted value
 	 * @throws StringValueConversionException
 	 */
+	@SuppressWarnings({ "unchecked", "rawtypes" })
 	public final <T> T to(final Class<T> type) throws StringValueConversionException
 	{
 		if (type == null)
@@ -889,6 +890,7 @@ public class StringValue implements IClusterable
 	 *            This will be returned if there is an error converting the value
 	 * @return The value as an enum
 	 */
+	@SuppressWarnings("unchecked")
 	public final <T extends Enum<T>> T toEnum(final T defaultValue)
 	{
 		Args.notNull(defaultValue, "defaultValue");

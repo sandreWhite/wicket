@@ -116,8 +116,8 @@
 				var wb = Wicket.Browser;
 				if (wb._isIE11 === null) {
 					var userAgent = window.navigator.userAgent;
-					var isTrident = userAgent.indexOf("Trident");
-					var is11 = userAgent.indexOf("rv:11");
+					var isTrident = userAgent.indexOf("Trident") > -1;
+					var is11 = userAgent.indexOf("rv:11") > -1;
 					wb._isIE11 = isTrident && is11;
 				}
 				return wb._isIE11;
@@ -177,8 +177,7 @@
 			 * If no event is given as argument (IE), window.event is returned.
 			 */
 			fix: function (evt) {
-				var evnt = evt || window.event;
-				return jQuery.event.fix(evnt);
+				return jQuery.event.fix(evt || window.event);
 			},
 
 			fire: function (element, event) {
@@ -209,21 +208,18 @@
 						jQuery(fn);
 					});
 				} else {
-					// try to find the element once the DOM is ready
-					jQuery(function() {
-						type = (type === 'mousewheel' && Wicket.Browser.isGecko()) ? 'DOMMouseScroll' : type;
-						var el = element;
-						if (typeof(element) === 'string') {
-							el = document.getElementById(element);
-						}
+					type = (type === 'mousewheel' && Wicket.Browser.isGecko()) ? 'DOMMouseScroll' : type;
+					var el = element;
+					if (typeof(element) === 'string') {
+						el = document.getElementById(element);
+					}
 
-						if (!el && Wicket.Log) {
-							Wicket.Log.error('Cannot bind a listener for event "' + type +
-								'" on element "' + element + '" because the element is not in the DOM');
-						}
+					if (!el && Wicket.Log) {
+						Wicket.Log.error('Cannot bind a listener for event "' + type +
+							'" on element "' + element + '" because the element is not in the DOM');
+					}
 
-						jQuery(el).on(type, selector, data, fn);
-					});
+					jQuery(el).on(type, selector, data, fn);
 				}
 				return element;
 			},
@@ -296,6 +292,7 @@
 			Topic: {
 				DOM_NODE_REMOVING      : '/dom/node/removing',
 				DOM_NODE_ADDED         : '/dom/node/added',
+				AJAX_CALL_INIT         : '/ajax/call/init',
 				AJAX_CALL_BEFORE       : '/ajax/call/before',
 				AJAX_CALL_PRECONDITION : '/ajax/call/precondition',
 				AJAX_CALL_BEFORE_SEND  : '/ajax/call/beforeSend',
@@ -303,6 +300,7 @@
 				AJAX_CALL_COMPLETE     : '/ajax/call/complete',
 				AJAX_CALL_AFTER        : '/ajax/call/after',
 				AJAX_CALL_FAILURE      : '/ajax/call/failure',
+				AJAX_CALL_DONE         : '/ajax/call/done',
 				AJAX_HANDLERS_BOUND    : '/ajax/handlers/bound'
 			}
 		}

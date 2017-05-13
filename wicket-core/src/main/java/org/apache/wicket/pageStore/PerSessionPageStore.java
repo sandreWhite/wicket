@@ -139,7 +139,7 @@ public class PerSessionPageStore extends AbstractCachingPageStore<IManageablePag
 			@Override
 			public int compare(PageValue p1, PageValue p2)
 			{
-				return Long.valueOf(p1.accessTime).compareTo(p2.accessTime);
+				return Long.compare(p1.accessTime, p2.accessTime);
 			}
 		}
 
@@ -322,5 +322,11 @@ public class PerSessionPageStore extends AbstractCachingPageStore<IManageablePag
 		{
 			cache.clear();
 		}
+	}
+
+	@Override
+	public boolean canBeAsynchronous()
+	{
+		return false; // NOTE: not analyzed neither tested yet, this page store being wrapped by asynchronous one
 	}
 }

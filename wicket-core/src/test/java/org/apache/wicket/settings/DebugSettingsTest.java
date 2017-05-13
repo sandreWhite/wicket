@@ -18,9 +18,9 @@ package org.apache.wicket.settings;
 
 import org.apache.wicket.Component;
 import org.apache.wicket.MockPageWithLink;
-import org.apache.wicket.WicketTestCase;
 import org.apache.wicket.markup.html.link.Link;
 import org.apache.wicket.util.tester.TagTester;
+import org.apache.wicket.util.tester.WicketTestCase;
 import org.junit.Test;
 
 /**
@@ -37,7 +37,7 @@ public class DebugSettingsTest extends WicketTestCase
 		String attributeName = "data-wicket-path";
 		tester.getApplication().getDebugSettings().setComponentPathAttributeName(attributeName);
 		MockPageWithLink page = new MockPageWithLink();
-		Component link = new Link(MockPageWithLink.LINK_ID)
+		Component link = new Link<Void>(MockPageWithLink.LINK_ID)
 		{
 			@Override
 			public void onClick()
@@ -49,29 +49,6 @@ public class DebugSettingsTest extends WicketTestCase
 
 		TagTester tagTester = tester.getTagById(MockPageWithLink.LINK_ID);
 		String wicketPath = tagTester.getAttribute(attributeName);
-		assertEquals(link.getPageRelativePath(), wicketPath);
-	}
-
-	/**
-	 * https://issues.apache.org/jira/browse/WICKET-5498
-	 */
-	@Test
-	public void setComponentPathAttributeNameDeprected()
-	{
-		tester.getApplication().getDebugSettings().setOutputComponentPath(true);
-		MockPageWithLink page = new MockPageWithLink();
-		Component link = new Link(MockPageWithLink.LINK_ID)
-		{
-			@Override
-			public void onClick()
-			{
-			}
-		}.setMarkupId(MockPageWithLink.LINK_ID);
-		page.add(link);
-		tester.startPage(page);
-
-		TagTester tagTester = tester.getTagById(MockPageWithLink.LINK_ID);
-		String wicketPath = tagTester.getAttribute("wicketpath");
 		assertEquals(link.getPageRelativePath(), wicketPath);
 	}
 }

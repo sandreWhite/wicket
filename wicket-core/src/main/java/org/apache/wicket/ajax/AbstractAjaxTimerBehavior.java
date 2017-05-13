@@ -18,9 +18,12 @@ package org.apache.wicket.ajax;
 
 import org.apache.wicket.Component;
 import org.apache.wicket.Page;
+import org.apache.wicket.core.request.handler.IPartialPageRequestHandler;
 import org.apache.wicket.markup.head.IHeaderResponse;
 import org.apache.wicket.markup.head.OnLoadHeaderItem;
+import org.apache.wicket.util.lang.Args;
 import org.apache.wicket.util.time.Duration;
+import org.danekja.java.util.function.serializable.SerializableConsumer;
 
 /**
  * A behavior that generates an AJAX update callback at a regular interval.
@@ -28,8 +31,10 @@ import org.apache.wicket.util.time.Duration;
  * @since 1.2
  * 
  * @author Igor Vaynberg (ivaynberg)
+ * 
  * @see #onTimer(AjaxRequestTarget)
- * @see #onRestart(AjaxRequestTarget)
+ * @see #restart(IPartialPageRequestHandler)
+ * @see #stop(IPartialPageRequestHandler)
  */
 public abstract class AbstractAjaxTimerBehavior extends AbstractDefaultAjaxBehavior
 {
@@ -39,11 +44,6 @@ public abstract class AbstractAjaxTimerBehavior extends AbstractDefaultAjaxBehav
 	private Duration updateInterval;
 
 	private boolean stopped = false;
-
-	/**
-	 * Is the timeout present in JavaScript already.
-	 */
-	private boolean hasTimeout = false;
 
 	/**
 	 * Construct.
@@ -86,12 +86,6 @@ public abstract class AbstractAjaxTimerBehavior extends AbstractDefaultAjaxBehav
 	{
 		super.renderHead(component, response);
 
-		if (component.getRequestCycle().find(AjaxRequestTarget.class) == null)
-		{
-			// complete page is rendered, so timeout has to be rendered again
-			hasTimeout = false;
-		}
-
 		if (isStopped() == false)
 		{
 			addTimeout(response);
@@ -124,9 +118,6 @@ public abstract class AbstractAjaxTimerBehavior extends AbstractDefaultAjaxBehav
 
 			if (shouldTrigger())
 			{
-				// re-add timeout
-				hasTimeout = false;
-
 				addTimeout(target.getHeaderResponse());
 
 				return;
@@ -159,7 +150,7 @@ public abstract class AbstractAjaxTimerBehavior extends AbstractDefaultAjaxBehav
 	protected abstract void onTimer(final AjaxRequestTarget target);
 
 	/**
-	 * @return {@code true} if has been stopped via {@link #stop(AjaxRequestTarget)}
+	 * @return {@code true} if has been stopped via {@link #stop(IPartialPageRequestHandler)}
 	 */
 	public final boolean isStopped()
 	{
@@ -172,7 +163,7 @@ public abstract class AbstractAjaxTimerBehavior extends AbstractDefaultAjaxBehav
 	 * @param target
 	 *            may be null
 	 */
-	public final void restart(final AjaxRequestTarget target)
+	public final void restart(final IPartialPageRequestHandler target)
 	{
 		if (stopped == true)
 		{
@@ -187,23 +178,12 @@ public abstract class AbstractAjaxTimerBehavior extends AbstractDefaultAjaxBehav
 
 	private void addTimeout(IHeaderResponse headerResponse)
 	{
-		if (hasTimeout == false)
-		{
-			hasTimeout = true;
-
-			headerResponse.render(
-				OnLoadHeaderItem.forScript(getJsTimeoutCall(updateInterval)));
-		}
+		headerResponse.render(OnLoadHeaderItem.forScript(getJsTimeoutCall(updateInterval)));
 	}
 
 	private void clearTimeout(IHeaderResponse headerResponse)
 	{
-		if (hasTimeout)
-		{
-			hasTimeout = false;
-
-			headerResponse.render(OnLoadHeaderItem.forScript("Wicket.Timer.clear('" + getComponent().getMarkupId() + "');"));
-		}
+		headerResponse.render(OnLoadHeaderItem.forScript("Wicket.Timer.clear('" + getComponent().getMarkupId() + "');"));
 	}
 
 	/**
@@ -212,7 +192,7 @@ public abstract class AbstractAjaxTimerBehavior extends AbstractDefaultAjaxBehav
 	 * @param target
 	 *            may be null
 	 */
-	public final void stop(final AjaxRequestTarget target)
+	public final void stop(final IPartialPageRequestHandler target)
 	{
 		if (stopped == false)
 		{
@@ -228,20 +208,37 @@ public abstract class AbstractAjaxTimerBehavior extends AbstractDefaultAjaxBehav
 	@Override
 	public void onRemove(Component component)
 	{
-		AjaxRequestTarget target = component.getRequestCycle().find(AjaxRequestTarget.class);
-		if (target != null)
-		{
-			clearTimeout(target.getHeaderResponse());
-		}
+		component.getRequestCycle().find(IPartialPageRequestHandler.class).ifPresent(target -> clearTimeout(target.getHeaderResponse()));
 	}
 
 	@Override
 	protected void onUnbind()
 	{
-		AjaxRequestTarget target = getComponent().getRequestCycle().find(AjaxRequestTarget.class);
-		if (target != null)
+		getComponent().getRequestCycle().find(IPartialPageRequestHandler.class).ifPresent(target -> clearTimeout(target.getHeaderResponse()));
+	}
+
+	/**
+	 * Creates an {@link AbstractAjaxTimerBehavior} based on lambda expressions
+	 *
+	 * @param interval
+	 *            the interval the timer
+	 * @param onTimer
+	 *            the consumer which accepts the {@link AjaxRequestTarget}
+	 * @return the {@link AbstractAjaxTimerBehavior}
+	 */
+	public static AbstractAjaxTimerBehavior onTimer(Duration interval, SerializableConsumer<AjaxRequestTarget> onTimer)
+	{
+		Args.notNull(onTimer, "onTimer");
+
+		return new AbstractAjaxTimerBehavior(interval)
 		{
-			clearTimeout(target.getHeaderResponse());
-		}
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			protected void onTimer(AjaxRequestTarget target)
+			{
+				onTimer.accept(target);
+			}
+		};
 	}
 }

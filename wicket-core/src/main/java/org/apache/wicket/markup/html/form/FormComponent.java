@@ -101,7 +101,7 @@ import org.slf4j.LoggerFactory;
  * 
  */
 public abstract class FormComponent<T> extends LabeledWebMarkupContainer implements
-	IFormVisitorParticipant, IFormModelUpdateListener, IGenericComponent<T>
+	IFormVisitorParticipant, IFormModelUpdateListener, IGenericComponent<T, FormComponent<T>>
 {
 	private static final Logger logger = LoggerFactory.getLogger(FormComponent.class);
 
@@ -215,27 +215,21 @@ public abstract class FormComponent<T> extends LabeledWebMarkupContainer impleme
 				protected String getValue(String variableName)
 				{
 					Object value = vars.get(variableName);
-					if (value == null)
+					
+					if (value == null ||value instanceof String)
 					{
-						return null;
+						return String.valueOf(value);
 					}
-					else if (value instanceof String)
+					
+					IConverter converter = getConverter(value.getClass());
+					
+					if (converter == null)
 					{
-						// small optimization - no need to bother with conversion
-						// for String vars, e.g. {label}
-						return (String)value;
+						return Strings.toString(value);
 					}
 					else
 					{
-						IConverter converter = getConverter(value.getClass());
-						if (converter == null)
-						{
-							return Strings.toString(value);
-						}
-						else
-						{
-							return converter.convertToString(value, getLocale());
-						}
+						return converter.convertToString(value, getLocale());
 					}
 				}
 			}.toString();
@@ -640,7 +634,7 @@ public abstract class FormComponent<T> extends LabeledWebMarkupContainer impleme
 	/**
 	 * Clears the user input.
 	 */
-	public final void clearInput()
+	public void clearInput()
 	{
 		rawInput = NO_RAW_INPUT;
 	}
@@ -1056,7 +1050,7 @@ public abstract class FormComponent<T> extends LabeledWebMarkupContainer impleme
 		if (!required && getType() != null && getType().isPrimitive())
 		{
 			throw new WicketRuntimeException(
-				"FormComponent can't be required when the type is primitive class: " + this);
+				"FormComponent has to be required when the type is primitive class: " + this);
 		}
 		if (required != isRequired())
 		{
@@ -1504,10 +1498,15 @@ public abstract class FormComponent<T> extends LabeledWebMarkupContainer impleme
 
 		boolean isNull = getConvertedInput() == null;
 
-		IValidator<T> validator = null;
+		IValidator<T> validator;
 
 		for (Behavior behavior : getBehaviors())
 		{
+			if (isBehaviorAccepted(behavior) == false)
+			{
+				continue;
+			}
+
 			validator = null;
 			if (behavior instanceof ValidatorAdapter)
 			{
@@ -1554,32 +1553,6 @@ public abstract class FormComponent<T> extends LabeledWebMarkupContainer impleme
 		return new ValidatableAdapter();
 	}
 
-	@Override
-	@SuppressWarnings("unchecked")
-	public final IModel<T> getModel()
-	{
-		return (IModel<T>)getDefaultModel();
-	}
-
-	@Override
-	public final void setModel(IModel<T> model)
-	{
-		setDefaultModel(model);
-	}
-
-	@SuppressWarnings("unchecked")
-	@Override
-	public final T getModelObject()
-	{
-		return (T)getDefaultModelObject();
-	}
-
-	@Override
-	public final void setModelObject(T object)
-	{
-		setDefaultModelObject(object);
-	}
-
 	/**
 	 * Updates auto label css classes such as error/required during ajax updates when the labels may
 	 * not be directly repainted in the response.
@@ -1619,6 +1592,9 @@ public abstract class FormComponent<T> extends LabeledWebMarkupContainer impleme
 	public static <S> void updateCollectionModel(FormComponent<Collection<S>> formComponent)
 	{
 		Collection<S> convertedInput = formComponent.getConvertedInput();
+		if (convertedInput == null) {
+			convertedInput = Collections.emptyList();
+		}
 
 		Collection<S> collection = formComponent.getModelObject();
 		if (collection == null)
@@ -1635,10 +1611,7 @@ public abstract class FormComponent<T> extends LabeledWebMarkupContainer impleme
 			try
 			{
 				collection.clear();
-				if (convertedInput != null)
-				{
-					collection.addAll(convertedInput);
-				}
+				collection.addAll(convertedInput);
 				modified = true;
 			}
 			catch (UnsupportedOperationException unmodifiable)
@@ -1648,7 +1621,6 @@ public abstract class FormComponent<T> extends LabeledWebMarkupContainer impleme
 					logger.debug("An error occurred while trying to modify the collection attached to "
 							+ formComponent, unmodifiable);
 				}
-
 				collection = new ArrayList<>(convertedInput); 
 			}
 			

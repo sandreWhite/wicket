@@ -16,6 +16,7 @@
  */
 package org.apache.wicket.ajax.markup.html;
 
+import org.apache.wicket.Component;
 import org.apache.wicket.IGenericComponent;
 import org.apache.wicket.ajax.AjaxEventBehavior;
 import org.apache.wicket.ajax.AjaxRequestTarget;
@@ -34,7 +35,7 @@ import org.apache.wicket.model.IModel;
  *            type of model object
  * 
  */
-public abstract class AjaxLink<T> extends AbstractLink implements IAjaxLink, IGenericComponent<T>
+public abstract class AjaxLink<T> extends AbstractLink implements IAjaxLink, IGenericComponent<T, AjaxLink<T>>
 {
 	private static final long serialVersionUID = 1L;
 
@@ -90,6 +91,12 @@ public abstract class AjaxLink<T> extends AbstractLink implements IAjaxLink, IGe
 				super.updateAjaxAttributes(attributes);
 				AjaxLink.this.updateAjaxAttributes(attributes);
 			}
+			
+			@Override
+			public boolean getStatelessHint(Component component)
+			{
+				return AjaxLink.this.getStatelessHint();
+			}
 		};
 	}
 
@@ -134,29 +141,8 @@ public abstract class AjaxLink<T> extends AbstractLink implements IAjaxLink, IGe
 	public abstract void onClick(final AjaxRequestTarget target);
 
 	@Override
-	@SuppressWarnings("unchecked")
-	public final IModel<T> getModel()
+	protected boolean getStatelessHint()
 	{
-		return (IModel<T>)getDefaultModel();
+		return false;
 	}
-
-	@Override
-	public final void setModel(IModel<T> model)
-	{
-		setDefaultModel(model);
-	}
-
-	@Override
-	@SuppressWarnings("unchecked")
-	public final T getModelObject()
-	{
-		return (T)getDefaultModelObject();
-	}
-
-	@Override
-	public final void setModelObject(T object)
-	{
-		setDefaultModelObject(object);
-	}
-
 }

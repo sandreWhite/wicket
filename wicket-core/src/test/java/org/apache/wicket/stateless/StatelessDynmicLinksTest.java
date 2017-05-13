@@ -16,8 +16,8 @@
  */
 package org.apache.wicket.stateless;
 
-import org.apache.wicket.WicketTestCase;
 import org.apache.wicket.request.Url;
+import org.apache.wicket.util.tester.WicketTestCase;
 import org.junit.Test;
 
 /**
@@ -36,15 +36,15 @@ public class StatelessDynmicLinksTest extends WicketTestCase
 		tester.startPage(StatelessPageWithDynamicLinks.class);
 		assertTrue(tester.getLastResponseAsString().contains("LINK-1"));
 
-		tester.getRequest().setUrl(Url.parse("stateless?-0.ILinkListener-links:1"));
+		tester.getRequest().setUrl(Url.parse("stateless?--links:1"));
 		tester.processRequest();
 		assertTrue(tester.getLastResponseAsString().contains("LINK-2"));
 
-		tester.getRequest().setUrl(Url.parse("stateless?-0.ILinkListener-links:2"));
+		tester.getRequest().setUrl(Url.parse("stateless?--links:2"));
 		tester.processRequest();
 		assertTrue(tester.getLastResponseAsString().contains("LINK-3"));
 
-		tester.getRequest().setUrl(Url.parse("stateless?-0.ILinkListener-links:3"));
+		tester.getRequest().setUrl(Url.parse("stateless?--links:3"));
 		tester.processRequest();
 		assertTrue(tester.getLastResponseAsString().contains("LINK-4"));
 	}

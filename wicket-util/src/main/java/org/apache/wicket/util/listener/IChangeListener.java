@@ -20,11 +20,15 @@ package org.apache.wicket.util.listener;
  * Generic "something changed" listener interface.
  * 
  * @author Jonathan Locke
+ * @param <T> 
  */
-public interface IChangeListener
+@FunctionalInterface
+public interface IChangeListener<T>
 {
 	/**
 	 * Client method that is called to indicate that something changed.
+	 *
+	 * @param modifiable The object that has changed
 	 */
-	void onChange();
+	void onChange(T modifiable);
 }

@@ -270,7 +270,9 @@ public class ServletWebResponse extends WebResponse
 
 			if (webRequest.isAjax())
 			{
-				httpServletResponse.setHeader("Ajax-Location", url);
+				setHeader("Ajax-Location", url);
+				setContentType("text/xml;charset=" +
+					webRequest.getContainerRequest().getCharacterEncoding());
 
 				/*
 				 * usually the Ajax-Location header is enough and we do not need to the redirect url
@@ -280,21 +282,9 @@ public class ServletWebResponse extends WebResponse
 				 */
 				httpServletResponse.getWriter().write(
 					"<ajax-response><redirect><![CDATA[" + url + "]]></redirect></ajax-response>");
-
-				setContentType("text/xml;charset=" +
-					webRequest.getContainerRequest().getCharacterEncoding());
-				disableCaching();
 			}
 			else
 			{
-				if (url.startsWith("./"))
-				{
-					/*
-					 * WICKET-4260 Tomcat does not canonalize urls, which leads to problems with IE
-					 * when url is relative and starts with a dot
-					 */
-					url = url.substring(2);
-				}
 				httpServletResponse.sendRedirect(url);
 			}
 		}

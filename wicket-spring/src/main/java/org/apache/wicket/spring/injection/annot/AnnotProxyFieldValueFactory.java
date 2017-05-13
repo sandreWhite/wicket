@@ -17,6 +17,7 @@
 package org.apache.wicket.spring.injection.annot;
 
 import java.lang.reflect.Field;
+import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -40,6 +41,7 @@ import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.beans.factory.support.AbstractBeanDefinition;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.support.AbstractApplicationContext;
+import org.springframework.core.ResolvableType;
 
 /**
  * {@link IFieldValueFactory} that uses {@link LazyInitProxyFactory} to create proxies for Spring
@@ -72,6 +74,7 @@ import org.springframework.context.support.AbstractApplicationContext;
  * 
  * @author Igor Vaynberg (ivaynberg)
  * @author Istvan Devai
+ * @author Tobias Soloschenko
  */
 public class AnnotProxyFieldValueFactory implements IFieldValueFactory
 {
@@ -79,7 +82,8 @@ public class AnnotProxyFieldValueFactory implements IFieldValueFactory
 
 	private final ConcurrentMap<SpringBeanLocator, Object> cache = Generics.newConcurrentHashMap();
 
-	private final ConcurrentMap<Class<?>, String> beanNameCache = Generics.newConcurrentHashMap();
+	private final ConcurrentMap<SimpleEntry<Class<?>, Class<?>>, 
+								String> beanNameCache = Generics.newConcurrentHashMap();
 
 	private final boolean wrapInProxies;
 
@@ -127,15 +131,10 @@ public class AnnotProxyFieldValueFactory implements IFieldValueFactory
 				required = true;
 			}
 
-			String beanName = getBeanName(field, name, required);
+			Class<?> generic = ResolvableType.forField(field).resolveGeneric(0);
+			String beanName = getBeanName(field, name, required, generic);
 
-			if (beanName == null)
-			{
-				return null;
-			}
-
-			SpringBeanLocator locator = new SpringBeanLocator(beanName, field.getType(),
-				contextLocator);
+			SpringBeanLocator locator = new SpringBeanLocator(beanName, field.getType(), field, contextLocator);
 
 			// only check the cache if the bean is a singleton
 			Object cachedValue = cache.get(locator);
@@ -186,20 +185,24 @@ public class AnnotProxyFieldValueFactory implements IFieldValueFactory
 	 * @param field
 	 * @return bean name
 	 */
-	private String getBeanName(final Field field, String name, boolean required)
+	private String getBeanName(final Field field, String name, boolean required, Class<?> generic)
 	{
-
 		if (Strings.isEmpty(name))
 		{
 			Class<?> fieldType = field.getType();
+			SimpleEntry<Class<?>, Class<?>> keyPair =
+				new SimpleEntry<Class<?>, Class<?>>(fieldType, generic);
+
 			name = beanNameCache.get(fieldType);
 			if (name == null)
 			{
-				name = getBeanNameOfClass(contextLocator.getSpringContext(), fieldType, required);
+				name = getBeanNameOfClass(contextLocator.getSpringContext(), fieldType, 
+					generic, field.getName());
 
 				if (name != null)
 				{
-					String tmpName = beanNameCache.putIfAbsent(fieldType, name);
+					
+					String tmpName = beanNameCache.putIfAbsent(keyPair, name);
 					if (tmpName != null)
 					{
 						name = tmpName;
@@ -219,16 +222,15 @@ public class AnnotProxyFieldValueFactory implements IFieldValueFactory
 	 *            spring application context
 	 * @param clazz
 	 *            bean class
-	 * @param required
-	 *            true if the value is required
+	 * @param fieldName 
 	 * @throws IllegalStateException
 	 * @return spring name of the bean
 	 */
 	private String getBeanNameOfClass(final ApplicationContext ctx, final Class<?> clazz,
-		final boolean required)
+		final Class<?> generic, String fieldName)
 	{
 		// get the list of all possible matching beans
-		List<String> names = new ArrayList<String>(
+		List<String> names = new ArrayList<>(
 			Arrays.asList(BeanFactoryUtils.beanNamesForTypeIncludingAncestors(ctx, clazz)));
 
 		// filter out beans that are not candidates for autowiring
@@ -249,15 +251,7 @@ public class AnnotProxyFieldValueFactory implements IFieldValueFactory
 			}
 		}
 
-		if (names.isEmpty())
-		{
-			if (required)
-			{
-				throw new IllegalStateException("bean of type [" + clazz.getName() + "] not found");
-			}
-			return null;
-		}
-		else if (names.size() > 1)
+		if (names.size() > 1)
 		{
 			if (ctx instanceof AbstractApplicationContext)
 			{
@@ -279,22 +273,38 @@ public class AnnotProxyFieldValueFactory implements IFieldValueFactory
 					return primaries.get(0);
 				}
 			}
+			
+			//use field name to find a match
+			int nameIndex = names.indexOf(fieldName);
+			
+			if (nameIndex > -1)
+			{
+				return names.get(nameIndex);
+			}
+			
+			if (generic != null)
+			{
+				return null;
+			}
+			
 			StringBuilder msg = new StringBuilder();
 			msg.append("More than one bean of type [");
 			msg.append(clazz.getName());
 			msg.append("] found, you have to specify the name of the bean ");
 			msg.append("(@SpringBean(name=\"foo\")) or (@Named(\"foo\") if using @javax.inject classes) in order to resolve this conflict. ");
 			msg.append("Matched beans: ");
-			msg.append(Strings.join(",", names.toArray(new String[names.size()])));
+			msg.append(Strings.join(",", names));
 			throw new IllegalStateException(msg.toString());
 		}
-		else
+		else if(!names.isEmpty())
 		{
 			return names.get(0);
 		}
+		
+		return null;
 	}
 
-	private BeanDefinition getBeanDefinition(final ConfigurableListableBeanFactory beanFactory,
+	public BeanDefinition getBeanDefinition(final ConfigurableListableBeanFactory beanFactory,
 		final String name)
 	{
 		if (beanFactory.containsBeanDefinition(name))
@@ -315,9 +325,6 @@ public class AnnotProxyFieldValueFactory implements IFieldValueFactory
 		}
 	}
 
-	/**
-	 * @see org.apache.wicket.injection.IFieldValueFactory#supportsField(java.lang.reflect.Field)
-	 */
 	@Override
 	public boolean supportsField(final Field field)
 	{

@@ -16,6 +16,7 @@
  */
 package org.apache.wicket.settings;
 
+import org.apache.wicket.Application;
 import org.apache.wicket.Component;
 import org.apache.wicket.authentication.IAuthenticationStrategy;
 import org.apache.wicket.authentication.strategy.DefaultAuthenticationStrategy;
@@ -23,12 +24,12 @@ import org.apache.wicket.authorization.IAuthorizationStrategy;
 import org.apache.wicket.authorization.IUnauthorizedComponentInstantiationListener;
 import org.apache.wicket.authorization.IUnauthorizedResourceRequestListener;
 import org.apache.wicket.authorization.UnauthorizedInstantiationException;
-import org.apache.wicket.util.crypt.CachingSunJceCryptFactory;
+import org.apache.wicket.core.util.crypt.KeyInSessionSunJceCryptFactory;
 import org.apache.wicket.util.crypt.ICryptFactory;
 import org.apache.wicket.util.lang.Args;
 
 /**
- * Interface for security related settings
+ * Class for security related settings
  *
  * @author Jonathan Locke
  * @author Chris Turner
@@ -56,9 +57,10 @@ public class SecuritySettings
 	private ICryptFactory cryptFactory;
 
 	/**
-	 * Whether mounts should be enforced. If true, requests for mounted targets have to done through
-	 * the mounted paths. If, for instance, a bookmarkable page is mounted to a path, a request to
-	 * that same page via the bookmarkablePage parameter will be denied.
+	 * Whether mounts should be enforced. If {@code true}, requests for a page will be
+	 * allowed only if the page has been explicitly mounted in {@link Application#init() MyApplication#init()}.
+	 *
+	 * This setting basically disables {@link org.apache.wicket.core.request.mapper.BookmarkableMapper}
 	 */
 	private boolean enforceMounts = false;
 
@@ -107,23 +109,16 @@ public class SecuritySettings
 	{
 		if (cryptFactory == null)
 		{
-			System.err
-				.print("********************************************************************\n"
-					+ "*** WARNING: Wicket is using a DEFAULT_ENCRYPTION_KEY            ***\n"
-					+ "***                            ^^^^^^^^^^^^^^^^^^^^^^            ***\n"
-					+ "*** Do NOT deploy to your live server(s) without changing this.  ***\n"
-					+ "*** See SecuritySettings#setCryptFactory() for more information. ***\n"
-					+ "********************************************************************\n");
-
-			cryptFactory = new CachingSunJceCryptFactory(DEFAULT_ENCRYPTION_KEY);
+			cryptFactory = new KeyInSessionSunJceCryptFactory();
 		}
 		return cryptFactory;
 	}
 
 	/**
-	 * Gets whether mounts should be enforced. If true, requests for mounted targets have to done
-	 * through the mounted paths. If, for instance, a bookmarkable page is mounted to a path, a
-	 * request to that same page via the bookmarkablePage parameter will be denied.
+	 * Gets whether page mounts should be enforced. If {@code true}, requests for a page will be
+	 * allowed only if the page has been explicitly mounted in {@link Application#init() MyApplication#init()}.
+	 *
+	 * This setting basically disables {@link org.apache.wicket.core.request.mapper.BookmarkableMapper}
 	 *
 	 * @return Whether mounts should be enforced
 	 */

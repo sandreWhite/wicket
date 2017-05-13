@@ -28,8 +28,6 @@ import org.apache.wicket.markup.html.form.TextField;
 import org.apache.wicket.markup.html.panel.FeedbackPanel;
 import org.apache.wicket.markup.html.panel.Panel;
 import org.apache.wicket.model.CompoundPropertyModel;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Reusable user sign in panel with username and password as well as support for persistence of the
@@ -37,9 +35,9 @@ import org.slf4j.LoggerFactory;
  * passing the username and password submitted. The signIn() method should authenticate the user's
  * session.
  * 
- * @see {@link IAuthenticationStrategy}
- * @see {@link org.apache.wicket.settings.SecuritySettings#getAuthenticationStrategy()}
- * @see {@link DefaultAuthenticationStrategy}
+ * @see IAuthenticationStrategy
+ * @see org.apache.wicket.settings.SecuritySettings#getAuthenticationStrategy()
+ * @see DefaultAuthenticationStrategy
  *
  * @author Jonathan Locke
  * @author Juergen Donnerstag

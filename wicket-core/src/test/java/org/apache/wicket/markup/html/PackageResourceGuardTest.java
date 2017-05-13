@@ -18,7 +18,7 @@ package org.apache.wicket.markup.html;
 
 import java.io.File;
 
-import org.apache.wicket.WicketTestCase;
+import org.apache.wicket.util.tester.WicketTestCase;
 import org.junit.Test;
 
 /**
@@ -54,16 +54,21 @@ public class PackageResourceGuardTest extends WicketTestCase
 		guard.setAllowAccessToRootResources(false);
 
 		assertTrue(guard.accept("/test/test.js"));
+		assertTrue(guard.accept("/test/.java"));
 		assertFalse(guard.accept("/test.js"));
 
-		if ("\\".equals(File.pathSeparator))
+		if ("\\".equals(File.separator))
 		{
+			assertTrue(guard.accept("c:\\test\\org\\apache\\.java"));
+			assertTrue(guard.accept("\\test\\org\\apache\\.java"));
 			assertTrue(guard.accept("c:\\test\\org\\apache\\test.js"));
 			assertTrue(guard.accept("\\test\\org\\apache\\test.js"));
 			assertFalse(guard.accept("c:\\test.js"));
 			assertFalse(guard.accept("\\test.js"));
 
 			// java also generates file paths with '/' on windows
+			assertTrue(guard.accept("c:/test/org/apache/.java"));
+			assertTrue(guard.accept("/test/org/apache/.java"));
 			assertTrue(guard.accept("c:/test/org/apache/test.js"));
 			assertTrue(guard.accept("/test/org/apache/test.js"));
 			assertFalse(guard.accept("c:/test.js"));

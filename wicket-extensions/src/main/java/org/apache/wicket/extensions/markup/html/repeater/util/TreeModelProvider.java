@@ -32,7 +32,7 @@ import org.apache.wicket.model.IModel;
 
 /**
  * A provider wrapping a Swing {@link TreeModel}.
- * 
+ * <br>
  * EXPERIMENTAL !
  * 
  * @author svenmeier

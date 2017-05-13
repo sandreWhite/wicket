@@ -24,9 +24,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
 
-import org.apache.wicket.WicketTestCase;
 import org.apache.wicket.util.file.File;
 import org.apache.wicket.util.tester.FormTester;
+import org.apache.wicket.util.tester.WicketTestCase;
 import org.apache.wicket.validation.IValidatable;
 import org.apache.wicket.validation.IValidator;
 import org.apache.wicket.validation.ValidationError;
@@ -128,22 +128,51 @@ public class FileUploadFieldTest extends WicketTestCase
 
 	/** 
 	 * https://issues.apache.org/jira/browse/WICKET-5691
-	 * 
-	 * */
+	 */
 	@Test
 	public void testEmptyField() throws Exception
 	{
 		tester.startPage(TestValidationPage.class);
 		
+		FileUploadField uploadField = (FileUploadField)tester.getComponentFromLastRenderedPage("form:upload");
+		uploadField.add(new IValidator<List<FileUpload>>() {
+			@Override
+			public void validate(IValidatable<List<FileUpload>> validatable)
+			{
+				// must check during validation, since the uploads are nullified on detach
+				assertEquals(0, validatable.getValue().size());
+			}
+		});
 		FormTester formtester = tester.newFormTester("form");
 		formtester.submit();
 		
-		FileUploadField fileUploadField = (FileUploadField)tester.getComponentFromLastRenderedPage("form:upload");
-		
-		assertEquals(0, fileUploadField.getFileUploads().size());
+		tester.assertNoErrorMessage();
 	}
 
-	
+	/** 
+	 * https://issues.apache.org/jira/browse/WICKET-6270
+	 */
+	@Test
+	public void testEmptyFieldAsBrowserSendsIt() throws Exception
+	{
+		tester.startPage(TestValidationPage.class);
+
+		FileUploadField uploadField = (FileUploadField)tester.getComponentFromLastRenderedPage("form:upload");
+		uploadField.add(new IValidator<List<FileUpload>>() {
+			@Override
+			public void validate(IValidatable<List<FileUpload>> validatable)
+			{
+				// must check during validation, since the uploads are nullified on detach
+				assertEquals(0, validatable.getValue().size());
+			}
+		});
+		FormTester formtester = tester.newFormTester("form");
+		formtester.setFile("upload", null, "text/xml");
+		formtester.submit();
+
+		tester.assertNoErrorMessage();
+	}
+
 	public static class TestValidationPage extends MockPageWithFormAndUploadField
 	{
 		/** */

@@ -35,7 +35,6 @@ import org.apache.wicket.core.request.handler.PageProvider;
 import org.apache.wicket.core.request.handler.RenderPageRequestHandler;
 import org.apache.wicket.core.request.handler.RenderPageRequestHandler.RedirectPolicy;
 import org.apache.wicket.request.http.WebRequest;
-import org.apache.wicket.request.http.handler.RedirectRequestHandler;
 import org.apache.wicket.request.mapper.parameter.PageParameters;
 import org.apache.wicket.util.string.StringValue;
 
@@ -198,7 +197,7 @@ public class RestartResponseAtInterceptPageException extends ResetResponseExcept
 		if (data != null)
 		{
 			String url = RequestCycle.get().getUrlRenderer().renderUrl(data.originalUrl);
-			RequestCycle.get().replaceAllRequestHandlers(new RedirectRequestHandler(url));
+			throw new NonResettingRestartException(url);
 		}
 	}
 

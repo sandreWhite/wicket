@@ -20,11 +20,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.Part;
 
 import org.apache.commons.fileupload.FileItem;
 import org.apache.commons.fileupload.FileItemFactory;
@@ -162,7 +165,7 @@ public class MultipartServletWebRequestImpl extends MultipartServletWebRequest
 
 		FileUploadBase fileUpload = newFileUpload(encoding);
 
-		final List<FileItem> items;
+		List<FileItem> items;
 
 		if (wantUploadProgressUpdates())
 		{
@@ -188,7 +191,14 @@ public class MultipartServletWebRequestImpl extends MultipartServletWebRequest
 		}
 		else
 		{
+			// try to parse the file uploads by using Apache Commons FileUpload APIs
+			// because they are feature richer (e.g. progress updates, cleaner)
 			items = fileUpload.parseRequest(new ServletRequestContext(request));
+			if (items.isEmpty())
+			{
+				// fallback to Servlet 3.0 APIs
+				items = readServlet3Parts(request);
+			}
 		}
 
 		// Loop through items
@@ -230,6 +240,38 @@ public class MultipartServletWebRequestImpl extends MultipartServletWebRequest
 				fileItems.add(item);
 			}
 		}
+	}
+
+	/**
+	 * Reads the uploads' parts by using Servlet 3.0 APIs.
+	 *
+	 * <strong>Note</strong>: By using Servlet 3.0 APIs the application won't be able to use
+	 * upload progress updates.
+	 *
+	 * @param request
+	 *              The http request with the upload data
+	 * @return A list of {@link FileItem}s
+	 * @throws FileUploadException
+	 */
+	private List<FileItem> readServlet3Parts(HttpServletRequest request) throws FileUploadException
+	{
+		List<FileItem> itemsFromParts = new ArrayList<>();
+		try
+		{
+			Collection<Part> parts = request.getParts();
+			if (parts != null)
+			{
+				for (Part part : parts)
+				{
+					FileItem fileItem = new ServletPartFileItem(part);
+					itemsFromParts.add(fileItem);
+				}
+			}
+		} catch (IOException | ServletException e)
+		{
+			throw new FileUploadException("An error occurred while reading the upload parts", e);
+		}
+		return itemsFromParts;
 	}
 
 	/**
@@ -314,9 +356,10 @@ public class MultipartServletWebRequestImpl extends MultipartServletWebRequest
 	protected Map<String, List<StringValue>> generatePostParameters()
 	{
 		Map<String, List<StringValue>> res = new HashMap<>();
-		for (String key : parameters.keySet())
+		for (Map.Entry<String, Object> entry : parameters.entrySet())
 		{
-			String[] val = (String[])parameters.get(key);
+			String key = entry.getKey();
+			String[] val = (String[])entry.getValue();
 			if (val != null && val.length > 0)
 			{
 				List<StringValue> items = new ArrayList<>();
@@ -530,4 +573,5 @@ public class MultipartServletWebRequestImpl extends MultipartServletWebRequest
 		Args.notNull(upload, "upload");
 		req.getSession().removeAttribute(getSessionKey(upload));
 	}
+
 }

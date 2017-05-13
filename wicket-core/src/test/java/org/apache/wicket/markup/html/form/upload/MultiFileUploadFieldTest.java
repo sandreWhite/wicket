@@ -20,11 +20,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import org.apache.wicket.MarkupContainer;
-import org.apache.wicket.WicketTestCase;
 import org.apache.wicket.markup.IMarkupResourceStreamProvider;
 import org.apache.wicket.markup.html.WebPage;
 import org.apache.wicket.markup.html.form.Form;
@@ -34,6 +31,7 @@ import org.apache.wicket.util.io.IOUtils;
 import org.apache.wicket.util.resource.IResourceStream;
 import org.apache.wicket.util.resource.StringResourceStream;
 import org.apache.wicket.util.tester.FormTester;
+import org.apache.wicket.util.tester.WicketTestCase;
 import org.junit.Test;
 
 /**
@@ -62,7 +60,7 @@ public class MultiFileUploadFieldTest extends WicketTestCase
 				List<FileUpload> uploads = filesModel.getObject();
 				assertEquals(2, uploads.size());
 
-				for (int i = 1; i < 2; i++)
+				for (int i = 0; i < 2; i++)
 				{
 					FileUpload fileUpload = uploads.get(i);
 					String clientFileName = fileUpload.getClientFileName();
@@ -80,6 +78,8 @@ public class MultiFileUploadFieldTest extends WicketTestCase
 		};
 		tester.startPage(page);
 
+		tester.assertContainsNot("disabled=\"disabled\"");
+
 		FormTester ft = tester.newFormTester("f");
 
 		ft.setFile("muf", new File("target/test-classes/org/apache/wicket/markup/html/form/upload/MultiFileUploadFieldTest0.txt"), "plain/text");
@@ -87,6 +87,21 @@ public class MultiFileUploadFieldTest extends WicketTestCase
 		ft.submit();
 
 		assertEquals("The form is not submitted", true, submitted.get());
+	}
+
+	/**
+	 * https://issues.apache.org/jira/browse/WICKET-6198
+	 */
+	@Test
+	public void disabledMultiFileUploadFields()
+	{
+		final ListModel<FileUpload> filesModel = new ListModel<>(new ArrayList<FileUpload>());
+
+		TestPage page = new TestPage(filesModel);
+		page.setEnabled(false);
+		tester.startPage(page);
+
+		tester.assertContains("disabled=\"disabled\"");
 	}
 
 	private static class TestPage extends WebPage implements IMarkupResourceStreamProvider

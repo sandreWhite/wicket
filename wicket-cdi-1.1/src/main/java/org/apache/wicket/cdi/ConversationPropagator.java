@@ -16,6 +16,7 @@
  */
 package org.apache.wicket.cdi;
 
+import javax.enterprise.context.ContextNotActiveException;
 import javax.enterprise.context.Conversation;
 import javax.enterprise.context.ConversationScoped;
 import javax.inject.Inject;
@@ -29,7 +30,6 @@ import org.apache.wicket.core.request.handler.IPageRequestHandler;
 import org.apache.wicket.request.IRequestHandler;
 import org.apache.wicket.request.IRequestHandlerDelegate;
 import org.apache.wicket.request.Url;
-import org.apache.wicket.request.cycle.AbstractRequestCycleListener;
 import org.apache.wicket.request.cycle.IRequestCycleListener;
 import org.apache.wicket.request.cycle.RequestCycle;
 import org.apache.wicket.request.handler.resource.ResourceReferenceRequestHandler;
@@ -48,7 +48,7 @@ import org.slf4j.LoggerFactory;
  * 
  * @author igor
  */
-public class ConversationPropagator extends AbstractRequestCycleListener
+public class ConversationPropagator implements IRequestCycleListener
 {
 	private static final Logger logger = LoggerFactory.getLogger(ConversationPropagator.class);
 
@@ -123,12 +123,19 @@ public class ConversationPropagator extends AbstractRequestCycleListener
 	}
 
 	@Override
-	public void onRequestHandlerScheduled(RequestCycle cycle, IRequestHandler handler)
+	public void onRequestHandlerExecuted(RequestCycle cycle, IRequestHandler handler)
 	{
 		// propagate current non-transient conversation to the newly scheduled
 		// page
-		if (conversation.isTransient())
+		try
 		{
+			if (conversation.isTransient())
+			{
+				return;
+			}
+		} catch (ContextNotActiveException cnax)
+		{
+			logger.debug("There is no active context for the requested scope!", cnax);
 			return;
 		}
 
@@ -215,9 +222,6 @@ public class ConversationPropagator extends AbstractRequestCycleListener
 			{
 				return false;
 			} else if ("org.apache.wicket.protocol.ws.api.WebSocketRequestHandler".equals(handlerClassName)) {
-				// injection is not supported in web sockets communication
-				return false;
-			} else if ("org.apache.wicket.atmosphere.AtmosphereRequestHandler".equals(handlerClassName)) {
 				// injection is not supported in web sockets communication
 				return false;
 			}

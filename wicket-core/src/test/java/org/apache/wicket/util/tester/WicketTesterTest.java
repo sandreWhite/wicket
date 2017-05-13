@@ -29,7 +29,6 @@ import org.apache.wicket.MockPageWithOneComponent;
 import org.apache.wicket.MockPanelWithLink;
 import org.apache.wicket.Page;
 import org.apache.wicket.Session;
-import org.apache.wicket.WicketTestCase;
 import org.apache.wicket.ajax.AjaxEventBehavior;
 import org.apache.wicket.ajax.AjaxRequestTarget;
 import org.apache.wicket.ajax.markup.html.AjaxLink;
@@ -63,6 +62,7 @@ import org.apache.wicket.request.resource.IResource;
 import org.apache.wicket.request.resource.PackageResource.PackageResourceBlockedException;
 import org.apache.wicket.request.resource.ResourceReference;
 import org.apache.wicket.resource.DummyPage;
+import org.apache.wicket.session.HttpSessionStore;
 import org.apache.wicket.util.string.StringValue;
 import org.apache.wicket.util.tester.DummyHomePage.TestLink;
 import org.apache.wicket.util.tester.MockPageParameterPage.MockInnerClassPage;
@@ -245,7 +245,7 @@ public class WicketTesterTest extends WicketTestCase
 			tester.clickLink("ajaxLinkWithSetResponsePageClass");
 			throw new RuntimeException("Disabled link should not be clickable.");
 		}
-		catch (AssertionError _)
+		catch (AssertionError ex)
 		{
 			;
 		}
@@ -269,7 +269,7 @@ public class WicketTesterTest extends WicketTestCase
 			tester.executeAjaxEvent("ajaxLinkWithSetResponsePageClass", "click");
 			throw new RuntimeException("Disabled link should not be clickable.");
 		}
-		catch (AssertionError _)
+		catch (AssertionError ex)
 		{
 			;
 		}
@@ -293,7 +293,7 @@ public class WicketTesterTest extends WicketTestCase
 			tester.assertEnabled("ajaxLinkWithSetResponsePageClass");
 			fail("The link must not be enabled.");
 		}
-		catch (AssertionError _)
+		catch (AssertionError ex)
 		{
 			;
 		}
@@ -317,7 +317,7 @@ public class WicketTesterTest extends WicketTestCase
 			tester.assertDisabled("ajaxLinkWithSetResponsePageClass");
 			fail("The link must not be disabled.");
 		}
-		catch (AssertionError _)
+		catch (AssertionError ex)
 		{
 			;
 		}
@@ -345,7 +345,7 @@ public class WicketTesterTest extends WicketTestCase
 			tester.assertRequired("createForm:id");
 			fail("Book ID component must not be required anymore!");
 		}
-		catch (AssertionError _)
+		catch (AssertionError ex)
 		{
 			;
 		}
@@ -355,7 +355,7 @@ public class WicketTesterTest extends WicketTestCase
 			// test #3: "createForm" is not a FormComponent
 			tester.assertRequired("createForm");
 		}
-		catch (AssertionError _)
+		catch (AssertionError ex)
 		{
 			;
 		}
@@ -525,11 +525,6 @@ public class WicketTesterTest extends WicketTestCase
 			public void setObject(String object)
 			{
 				value = object;
-			}
-
-			@Override
-			public void detach()
-			{
 			}
 		};
 
@@ -1206,13 +1201,13 @@ public class WicketTesterTest extends WicketTestCase
 		MockFormSubmitsPage page = new MockFormSubmitsPage()
 		{
 			@Override
-			protected void onAjaxSubmitLinkSubmit(AjaxRequestTarget target, Form<?> form)
+			protected void onAjaxSubmitLinkSubmit(AjaxRequestTarget target)
 			{
 				ajaxSubmitLinkSubmitted.set(true);
 			}
 
 			@Override
-			protected void onAjaxButtonSubmit(AjaxRequestTarget target, Form<?> form)
+			protected void onAjaxButtonSubmit(AjaxRequestTarget target)
 			{
 				ajaxButtonSubmitted.set(true);
 			}
@@ -1297,7 +1292,7 @@ public class WicketTesterTest extends WicketTestCase
 		MockPageWithLinkAndLabel page = new MockPageWithLinkAndLabel();
 		final Label label = new Label(MockPageWithLinkAndLabel.LABEL_ID, "Some text");
 		label.setOutputMarkupPlaceholderTag(true);
-		AjaxLink link = new AjaxLink(MockPageWithLinkAndLabel.LINK_ID)
+		AjaxLink link = new AjaxLink<Void>(MockPageWithLinkAndLabel.LINK_ID)
 		{
 			@Override
 			public void onClick(AjaxRequestTarget target)
@@ -1316,5 +1311,20 @@ public class WicketTesterTest extends WicketTestCase
 		tester.clickLink("link", true);
 
 		tester.assertComponentOnAjaxResponse(label.getPageRelativePath());
+	}
+
+	/**
+	 * https://issues.apache.org/jira/browse/WICKET-6062
+	 */
+	@Test
+	public void renewSessionIdAfterInvalidation() {
+		tester.getApplication().setSessionStoreProvider(HttpSessionStore::new);
+		tester.getSession().bind();
+		String firstId = tester.getSession().getId();
+
+		tester.getSession().invalidateNow();
+
+		String secondId = tester.getSession().getId();
+		assertNotEquals(firstId, secondId);
 	}
 }

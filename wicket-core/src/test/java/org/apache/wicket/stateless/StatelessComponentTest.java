@@ -16,10 +16,10 @@
  */
 package org.apache.wicket.stateless;
 
-import org.apache.wicket.WicketTestCase;
 import org.apache.wicket.request.Url;
 import org.apache.wicket.request.mapper.parameter.INamedParameters;
 import org.apache.wicket.request.mapper.parameter.PageParameters;
+import org.apache.wicket.util.tester.WicketTestCase;
 import org.junit.Test;
 
 /**
@@ -61,7 +61,7 @@ public class StatelessComponentTest extends WicketTestCase
 		executeTest(StatelessComponentPage.class, "StatelessComponentPage_mount_result.html");
 		tester.getRequest()
 			.setUrl(
-				Url.parse("stateless?0-1.ILinkListener-link&testParam1=testValue1&testParam2=testValue2"));
+				Url.parse("stateless?0-1.-link&testParam1=testValue1&testParam2=testValue2"));
 		try
 		{
 			tester.processRequest();
@@ -88,7 +88,7 @@ public class StatelessComponentTest extends WicketTestCase
 
 		tester.getRequest()
 			.setUrl(
-				Url.parse("wicket/bookmarkable/org.apache.wicket.stateless.StatelessComponentPageWithParams?0-1.ILinkListener-link&amp;testParam1=testValue1&amp;testParam2=testValue2"));
+				Url.parse("wicket/bookmarkable/org.apache.wicket.stateless.StatelessComponentPageWithParams?0-1.-link&amp;testParam1=testValue1&amp;testParam2=testValue2"));
 		try
 		{
 			tester.processRequest();
@@ -142,7 +142,7 @@ public class StatelessComponentTest extends WicketTestCase
 		executeTest(StatelessComponentPageWithParams.class, params,
 			"StatelessComponentPageWithParams_indexed_mount_result.html");
 		tester.getRequest().setUrl(
-			Url.parse("stateless/testValue1/testValue2?0-1.ILinkListener-link"));
+			Url.parse("stateless/testValue1/testValue2?0-1.-link"));
 		try
 		{
 			tester.processRequest();

@@ -475,13 +475,16 @@ public class MockServletContext implements ServletContext
 		{
 			File[] files = current.listFiles();
 			boolean match = false;
-			for (File file : files)
+			if (files != null)
 			{
-				if (file.getName().equals(element) && file.isDirectory())
+				for (File file : files)
 				{
-					current = file;
-					match = true;
-					break;
+					if (file.getName().equals(element) && file.isDirectory())
+					{
+						current = file;
+						match = true;
+						break;
+					}
 				}
 			}
 			if (!match)
@@ -491,16 +494,19 @@ public class MockServletContext implements ServletContext
 		}
 
 		File[] files = current.listFiles();
-		Set<String> result = new HashSet<String>();
-		int stripLength = webappRoot.getPath().length();
-		for (File file : files)
+		Set<String> result = new HashSet<>();
+		if (files != null)
 		{
-			String s = file.getPath().substring(stripLength).replace('\\', '/');
-			if (file.isDirectory())
+			int stripLength = webappRoot.getPath().length();
+			for (File file : files)
 			{
-				s = s + "/";
+				String s = file.getPath().substring(stripLength).replace('\\', '/');
+				if (file.isDirectory())
+				{
+					s = s + "/";
+				}
+				result.add(s);
 			}
-			result.add(s);
 		}
 		return result;
 	}
@@ -701,6 +707,12 @@ public class MockServletContext implements ServletContext
 	{
 	}
 
+	@Override
+	public String getVirtualServerName()
+	{
+		return "WicketTester 8.x";
+	}
+
 	/**
 	 * NOT USED - Servlet spec requires that this always returns null.
 	 * 
@@ -828,106 +840,4 @@ public class MockServletContext implements ServletContext
 			return null;
 		}
 	}
-
-	// @formatter:off
-	/* TODO JAVA6,SERVLET3.0
-	 * servlet 3.0 stuff
-	 * 
-	public int getEffectiveMajorVersion()
-	{
-		return 0;
-	}
-
-	public int getEffectiveMinorVersion()
-	{
-		return 0;
-	}
-
-	public boolean setInitParameter(String name, String value)
-	{
-		return false;
-	}
-
-	public javax.servlet.FilterRegistration.Dynamic addFilter(String filterName, String className)
-	{
-		return null;
-	}
-
-	public javax.servlet.FilterRegistration.Dynamic addFilter(String filterName, Filter filter)
-	{
-		return null;
-	}
-
-	public javax.servlet.FilterRegistration.Dynamic addFilter(String filterName,
-		Class<? extends Filter> filterClass)
-	{
-		return null;
-	}
-
-	public <T extends Filter> T createFilter(Class<T> clazz) throws ServletException
-	{
-		return null;
-	}
-
-	public FilterRegistration getFilterRegistration(String filterName)
-	{
-		return null;
-	}
-
-	public Map<String, ? extends FilterRegistration> getFilterRegistrations()
-	{
-		return null;
-	}
-
-	public SessionCookieConfig getSessionCookieConfig()
-	{
-		return null;
-	}
-
-	public void setSessionTrackingModes(Set<SessionTrackingMode> sessionTrackingModes)
-	{
-	}
-
-	public Set<SessionTrackingMode> getDefaultSessionTrackingModes()
-	{
-		return null;
-	}
-
-	public Set<SessionTrackingMode> getEffectiveSessionTrackingModes()
-	{
-		return null;
-	}
-
-	public void addListener(String className)
-	{
-	}
-
-	public <T extends EventListener> void addListener(T t)
-	{
-	}
-
-	public void addListener(Class<? extends EventListener> listenerClass)
-	{
-	}
-
-	public <T extends EventListener> T createListener(Class<T> clazz) throws ServletException
-	{
-		return null;
-	}
-
-	public JspConfigDescriptor getJspConfigDescriptor()
-	{
-		return null;
-	}
-
-	public ClassLoader getClassLoader()
-	{
-		return null;
-	}
-
-	public void declareRoles(String... roleNames)
-	{
-	}
-	*/
-	// @formatter:on
 }

@@ -19,11 +19,11 @@ package org.apache.wicket.core.request.mapper;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.wicket.RequestListenerInterface;
-import org.apache.wicket.core.request.handler.BookmarkableListenerInterfaceRequestHandler;
+import org.apache.wicket.IRequestListener;
+import org.apache.wicket.core.request.handler.BookmarkableListenerRequestHandler;
 import org.apache.wicket.core.request.handler.BookmarkablePageRequestHandler;
 import org.apache.wicket.core.request.handler.IPageRequestHandler;
-import org.apache.wicket.core.request.handler.ListenerInterfaceRequestHandler;
+import org.apache.wicket.core.request.handler.ListenerRequestHandler;
 import org.apache.wicket.core.request.handler.PageAndComponentProvider;
 import org.apache.wicket.core.request.handler.PageProvider;
 import org.apache.wicket.core.request.handler.RenderPageRequestHandler;
@@ -31,7 +31,6 @@ import org.apache.wicket.protocol.http.PageExpiredException;
 import org.apache.wicket.protocol.http.WebApplication;
 import org.apache.wicket.request.IRequestHandler;
 import org.apache.wicket.request.IRequestHandlerDelegate;
-import org.apache.wicket.request.IRequestMapper;
 import org.apache.wicket.request.Request;
 import org.apache.wicket.request.Url;
 import org.apache.wicket.request.component.IRequestablePage;
@@ -48,7 +47,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Abstract encoder for Bookmarkable, Hybrid and BookmarkableListenerInterface URLs.
+ * Abstract encoder for Bookmarkable, Hybrid and BookmarkableListener URLs.
  * 
  * @author Matej Knopp
  */
@@ -201,9 +200,6 @@ public abstract class AbstractBookmarkableMapper extends AbstractComponentMapper
 	 */
 	protected abstract boolean pageMustHaveBeenCreatedBookmarkable();
 
-	/**
-	 * @see IRequestMapper#getCompatibilityScore(Request)
-	 */
 	@Override
 	public int getCompatibilityScore(Request request)
 	{
@@ -258,41 +254,36 @@ public abstract class AbstractBookmarkableMapper extends AbstractComponentMapper
 		PageProvider provider = new PageProvider(pageInfo.getPageId(), pageClass, pageParameters,
 			renderCount);
 		provider.setPageSource(getContext());
-		if (provider.isNewPageInstance() && !getRecreateMountedPagesAfterExpiry())
-		{
-			throw new PageExpiredException(String.format("Bookmarkable page id '%d' has expired.",
-				pageInfo.getPageId()));
-		}
-		else
-		{
-			/** 
-			 * https://issues.apache.org/jira/browse/WICKET-5734
-			 * */
-			PageParameters constructionPageParameters = provider.hasPageInstance() ? 
-				provider.getPageInstance().getPageParameters() : new PageParameters();
 
-			if (PageParameters.equals(constructionPageParameters, pageParameters) == false)
-			{
-				// create a fresh page instance because the request page parameters are different than the ones
-				// when the resolved page by id has been created
-				return new RenderPageRequestHandler(new PageProvider(pageClass, pageParameters));
-			}
-			return new RenderPageRequestHandler(provider);
+		checkExpiration(provider, pageInfo);
+
+		/**
+		 * https://issues.apache.org/jira/browse/WICKET-5734
+		 * */
+		PageParameters constructionPageParameters = provider.hasPageInstance() ?
+			provider.getPageInstance().getPageParameters() : new PageParameters();
+
+		if (PageParameters.equals(constructionPageParameters, pageParameters) == false)
+		{
+			// create a fresh page instance because the request page parameters are different than the ones
+			// when the resolved page by id has been created
+			return new RenderPageRequestHandler(new PageProvider(pageClass, pageParameters));
 		}
+		return new RenderPageRequestHandler(provider);
 	}
 
 	boolean getRecreateMountedPagesAfterExpiry()
 	{
-		return WebApplication.get().getPageSettings().getRecreateMountedPagesAfterExpiry();
+		return WebApplication.get().getPageSettings().getRecreateBookmarkablePagesAfterExpiry();
 	}
 
 	/**
-	 * Creates a {@code IRequestHandler} that processes a listener request.
+	 * Creates a {@code IRequestHandler} that notifies an {@link IRequestListener}.
 	 * 
 	 * @param pageComponentInfo
 	 * @param pageClass
 	 * @param pageParameters
-	 * @return a {@code IRequestHandler} that invokes the listener interface
+	 * @return a {@code IRequestHandler} that notifies an {@link IRequestListener}.
 	 */
 	protected IRequestHandler processListener(PageComponentInfo pageComponentInfo,
 		Class<? extends IRequestablePage> pageClass, PageParameters pageParameters)
@@ -300,46 +291,31 @@ public abstract class AbstractBookmarkableMapper extends AbstractComponentMapper
 		PageInfo pageInfo = pageComponentInfo.getPageInfo();
 		ComponentInfo componentInfo = pageComponentInfo.getComponentInfo();
 		Integer renderCount = null;
-		RequestListenerInterface listenerInterface = null;
 
 		if (componentInfo != null)
 		{
 			renderCount = componentInfo.getRenderCount();
-			listenerInterface = requestListenerInterfaceFromString(componentInfo.getListenerInterface());
 		}
 
-		if (listenerInterface != null)
-		{
-			PageAndComponentProvider provider = new PageAndComponentProvider(pageInfo.getPageId(),
-				pageClass, pageParameters, renderCount, componentInfo.getComponentPath());
+		PageAndComponentProvider provider = new PageAndComponentProvider(pageInfo.getPageId(),
+			pageClass, pageParameters, renderCount, componentInfo.getComponentPath());
 
-			provider.setPageSource(getContext());
+		provider.setPageSource(getContext());
 
-			return new ListenerInterfaceRequestHandler(provider, listenerInterface,
-				componentInfo.getBehaviorId());
-		}
-		else
+		checkExpiration(provider, pageInfo);
+
+		return new ListenerRequestHandler(provider, componentInfo.getBehaviorId());
+	}
+
+	private void checkExpiration(PageProvider provider, PageInfo pageInfo)
+	{
+		if (provider.wasExpired() && !getRecreateMountedPagesAfterExpiry())
 		{
-			if (logger.isWarnEnabled())
-			{
-				if (componentInfo != null)
-				{
-					logger.warn("Unknown listener interface '{}'",
-						componentInfo.getListenerInterface());
-				}
-				else
-				{
-					logger.warn("Cannot extract the listener interface for PageComponentInfo: '{}'" +
-						pageComponentInfo);
-				}
-			}
-			return null;
+			throw new PageExpiredException(String.format("Bookmarkable page with id '%d' has expired.",
+					pageInfo.getPageId()));
 		}
 	}
 
-	/**
-	 * @see org.apache.wicket.request.IRequestMapper#mapRequest(org.apache.wicket.request.Request)
-	 */
 	@Override
 	public IRequestHandler mapRequest(Request request)
 	{
@@ -366,7 +342,7 @@ public abstract class AbstractBookmarkableMapper extends AbstractComponentMapper
 			}
 			else if (info.getComponentInfo() != null)
 			{
-				// with both page instance and component+listener this is a listener interface URL
+				// with both page instance and component this is a request listener URL
 				return processListener(info, pageClass, pageParameters);
 			}
 			else if (info.getPageInfo().getPageId() == null)
@@ -454,10 +430,10 @@ public abstract class AbstractBookmarkableMapper extends AbstractComponentMapper
 			}
 
 		}
-		else if (requestHandler instanceof BookmarkableListenerInterfaceRequestHandler)
+		else if (requestHandler instanceof BookmarkableListenerRequestHandler)
 		{
-			// listener interface URL with page class information
-			BookmarkableListenerInterfaceRequestHandler handler = (BookmarkableListenerInterfaceRequestHandler)requestHandler;
+			// request listener URL with page class information
+			BookmarkableListenerRequestHandler handler = (BookmarkableListenerRequestHandler)requestHandler;
 			Class<? extends IRequestablePage> pageClass = handler.getPageClass();
 
 			if (!checkPageClass(pageClass))
@@ -466,15 +442,13 @@ public abstract class AbstractBookmarkableMapper extends AbstractComponentMapper
 			}
 
 			Integer renderCount = null;
-			if (handler.getListenerInterface().isIncludeRenderCount())
+			if (handler.includeRenderCount())
 			{
 				renderCount = handler.getRenderCount();
 			}
 
 			PageInfo pageInfo = getPageInfo(handler);
-			ComponentInfo componentInfo = new ComponentInfo(renderCount,
-				requestListenerInterfaceToString(handler.getListenerInterface()),
-				handler.getComponentPath(), handler.getBehaviorIndex());
+			ComponentInfo componentInfo = new ComponentInfo(renderCount, handler.getComponentPath(), handler.getBehaviorIndex());
 
 			PageParameters parameters = getRecreateMountedPagesAfterExpiry() ? new PageParameters(
 				handler.getPage().getPageParameters()).mergeWith(handler.getPageParameters())

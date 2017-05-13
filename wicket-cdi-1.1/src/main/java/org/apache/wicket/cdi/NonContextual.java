@@ -44,9 +44,7 @@ public class NonContextual<T>
 	final InjectionTarget<T> it;
 
 	/**
-	 * Undeploys specified bean manager from cache
-	 * 
-	 * @param beanManager
+	 * Undeploys the looked up bean manager from cache
 	 */
 	public static void undeploy()
 	{
@@ -64,12 +62,24 @@ public class NonContextual<T>
 	}
 
 	/**
-	 * Factory method for creating noncontextual instances
+	 * Convenience factory method for an instance, see {@link #of(Class).
 	 * 
 	 * @param <T>
 	 * @param clazz
-	 * @param manager
-	 * @return
+	 * @return The NonContextual for the instance's class
+	 */
+	@SuppressWarnings("unchecked")
+	public static <T> NonContextual<T> of(T t) {
+		// cast is necessary for Eclipse compiler :/
+		return (NonContextual<T>)of(t.getClass());
+	}
+
+	/**
+	 * Factory method for creating non-contextual instances
+	 * 
+	 * @param <T>
+	 * @param clazz
+	 * @return The NonContextual for the given class
 	 */
 	public static <T> NonContextual<T> of(Class<? extends T> clazz)
 	{

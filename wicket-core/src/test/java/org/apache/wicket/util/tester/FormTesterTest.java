@@ -23,12 +23,12 @@ import java.util.Locale;
 import org.apache.wicket.Component;
 import org.apache.wicket.MarkupContainer;
 import org.apache.wicket.Session;
-import org.apache.wicket.WicketTestCase;
 import org.apache.wicket.core.request.handler.ListenerInvocationNotAllowedException;
 import org.apache.wicket.markup.IMarkupResourceStreamProvider;
 import org.apache.wicket.markup.html.WebPage;
 import org.apache.wicket.markup.html.form.DropDownChoice;
 import org.apache.wicket.markup.html.form.Form;
+import org.apache.wicket.markup.html.form.FormComponentUpdatingBehavior;
 import org.apache.wicket.markup.html.form.upload.FileUpload;
 import org.apache.wicket.model.Model;
 import org.apache.wicket.request.mapper.parameter.PageParameters;
@@ -265,20 +265,13 @@ public class FormTesterTest extends WicketTestCase
 				Form<Object> form = new Form<>("form");
 				add(form);
 				List<String> choices = Arrays.asList("opt 1", "opt 2");
-				form.add(new DropDownChoice<String>("selector", Model.of(""), choices)
-				{
+				form.add(new DropDownChoice<String>("selector", Model.of(""), choices).add(new FormComponentUpdatingBehavior() {
 					@Override
-					protected boolean wantOnSelectionChangedNotifications()
+					protected void onUpdate()
 					{
-						return true;
+						selection = (String)getFormComponent().getDefaultModelObject();
 					}
-
-					@Override
-					protected void onSelectionChanged(final String newSelection)
-					{
-						selection = newSelection;
-					}
-				});
+				}));
 			}
 
 			@Override

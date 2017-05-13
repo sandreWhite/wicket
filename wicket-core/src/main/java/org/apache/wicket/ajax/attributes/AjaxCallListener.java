@@ -28,6 +28,7 @@ import org.apache.wicket.util.string.Strings;
  */
 public class AjaxCallListener implements IAjaxCallListener, IComponentAwareHeaderContributor
 {
+	private StringBuilder init;
 	private StringBuilder success;
 	private StringBuilder failure;
 	private StringBuilder before;
@@ -35,6 +36,49 @@ public class AjaxCallListener implements IAjaxCallListener, IComponentAwareHeade
 	private StringBuilder after;
 	private StringBuilder complete;
 	private StringBuilder precondition;
+	private StringBuilder done;
+
+	/**
+	 * Sets the JavaScript code that will be returned by {@link #getInitHandler(Component)}.
+	 * If this code was already set, the new one will be appended to the existing one.
+	 * 
+	 * @param init
+	 * 			the JavaScript code for the corresponding handler
+	 * @return This
+	 */
+	public AjaxCallListener onInit(final CharSequence init)
+	{
+		if (Strings.isEmpty(init) == false)
+		{
+			if (this.init == null)
+			{
+				this.init = new StringBuilder();
+			}
+			this.init.append(init);
+		}
+		return this;
+	}
+
+	/**
+	 * Sets the JavaScript code that will be returned by {@link #getDoneHandler(Component)}.
+	 * If this code was already set, the new one will be appended to the existing one.
+	 *
+	 * @param init
+	 * 			the JavaScript code for the corresponding handler
+	 * @return This
+	 */
+	public AjaxCallListener onDone(final CharSequence done)
+	{
+		if (Strings.isEmpty(done) == false)
+		{
+			if (this.done == null)
+			{
+				this.done = new StringBuilder();
+			}
+			this.done.append(done);
+		}
+		return this;
+	}
 
 	/**
 	 * Sets the JavaScript code that will be returned by {@link #getBeforeHandler(Component)}.
@@ -196,6 +240,12 @@ public class AjaxCallListener implements IAjaxCallListener, IComponentAwareHeade
 	}
 
 	@Override
+	public CharSequence getInitHandler(Component component)
+	{
+		return init;
+	}
+
+	@Override
 	public CharSequence getBeforeHandler(Component component)
 	{
 		return before;
@@ -223,6 +273,11 @@ public class AjaxCallListener implements IAjaxCallListener, IComponentAwareHeade
 	public CharSequence getPrecondition(Component component)
 	{
 		return precondition;
+	}
+
+	@Override
+	public CharSequence getDoneHandler(Component component) {
+		return done;
 	}
 
 	@Override

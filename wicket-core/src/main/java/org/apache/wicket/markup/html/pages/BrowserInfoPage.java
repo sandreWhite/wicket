@@ -16,13 +16,11 @@
  */
 package org.apache.wicket.markup.html.pages;
 
-import org.apache.wicket.AttributeModifier;
 import org.apache.wicket.markup.head.IHeaderResponse;
+import org.apache.wicket.markup.head.MetaDataHeaderItem;
 import org.apache.wicket.markup.head.OnLoadHeaderItem;
-import org.apache.wicket.markup.html.WebComponent;
-import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.markup.html.WebPage;
-import org.apache.wicket.model.AbstractReadOnlyModel;
+import org.apache.wicket.markup.html.link.Link;
 import org.apache.wicket.model.IModel;
 import org.apache.wicket.model.LoadableDetachableModel;
 import org.apache.wicket.protocol.http.ClientProperties;
@@ -31,18 +29,18 @@ import org.apache.wicket.protocol.http.request.WebClientInfo;
 import org.apache.wicket.request.cycle.RequestCycle;
 
 /**
- * <p>
  * This page uses a form post right after the page has loaded in the browser, using JavaScript or
  * alternative means to detect and pass on settings to the embedded form. The form submit method
  * updates this session's {@link org.apache.wicket.core.request.ClientInfo} object and then redirects to
  * the original location as was passed in as a URL argument in the constructor.
- * </p>
+ * <p>
+ * If JavaScript is not enabled in the browser, a "refresh" meta-header will initiate a get on this page to
+ * continue with the original destination. As a fallback the user can click a link to do the same. 
  * <p>
  * This page is being used by the default implementation of {@link org.apache.wicket.Session#getClientInfo()},
  * which in turn uses
  * {@link org.apache.wicket.settings.RequestCycleSettings#getGatherExtendedBrowserInfo() a setting} to
  * determine whether this page should be redirected to (it does when it is true).
- * </p>
  * 
  * @author Eelco Hillenius
  */
@@ -51,30 +49,13 @@ public class BrowserInfoPage extends WebPage
 	private static final long serialVersionUID = 1L;
 
 	private BrowserInfoForm browserInfoForm;
-
+	
 	/**
-	 * Bookmarkable constructor. This is not for normal framework client use. It will be called
-	 * whenever JavaScript is not supported, and the browser info page's meta refresh fires to this
-	 * page. Prior to this, the other constructor should already have been called.
+	 * Bookmarkable constructor.
 	 */
 	public BrowserInfoPage()
 	{
 		initComps();
-		RequestCycle requestCycle = getRequestCycle();
-		WebSession session = (WebSession)getSession();
-		WebClientInfo clientInfo = session.getClientInfo();
-		if (clientInfo == null)
-		{
-			clientInfo = new WebClientInfo(requestCycle);
-			getSession().setClientInfo(clientInfo);
-		}
-		else
-		{
-			ClientProperties properties = clientInfo.getProperties();
-			properties.setJavaEnabled(false);
-		}
-
-		continueToOriginalDestination();
 	}
 
 	@Override
@@ -92,51 +73,86 @@ public class BrowserInfoPage extends WebPage
 		return false;
 	}
 
+	protected WebClientInfo newWebClientInfo(RequestCycle requestCycle)
+	{
+		return new WebClientInfo(requestCycle);
+	}
+
 	/**
 	 * Adds components.
 	 */
 	private void initComps()
 	{
-		WebComponent meta = new WebComponent("meta");
-
-		final IModel<String> urlModel = new LoadableDetachableModel<String>()
-		{
-			private static final long serialVersionUID = 1L;
-
+		IModel<WebClientInfo> info = new LoadableDetachableModel<WebClientInfo>() {
 			@Override
-			protected String load()
+			protected WebClientInfo load()
 			{
-				CharSequence url = urlFor(BrowserInfoPage.class, null);
-				return url.toString();
+				return newWebClientInfo(getRequestCycle());
+			}			
+		};
+
+		IModel<ClientProperties> properties = new LoadableDetachableModel<ClientProperties>()
+		{
+			@Override
+			protected ClientProperties load()
+			{
+				return info.getObject().getProperties();
 			}
 		};
 
-		meta.add(AttributeModifier.replace("content", new AbstractReadOnlyModel<String>()
-		{
-			private static final long serialVersionUID = 1L;
+		add(new ContinueLink("link", info));
 
-			@Override
-			public String getObject()
-			{
-				return "0; url=" + urlModel.getObject();
-			}
-
-		}));
-		add(meta);
-		WebMarkupContainer link = new WebMarkupContainer("link");
-		link.add(AttributeModifier.replace("href", urlModel));
-		add(link);
-
-		browserInfoForm = new BrowserInfoForm("postback")
+		browserInfoForm = new BrowserInfoForm("postback", properties)
 		{
 			private static final long serialVersionUID = 1L;
 
 			@Override
 			protected void afterSubmit()
 			{
+				getModelObject().setJavaScriptEnabled(true);
+
+				WebSession.get().setClientInfo(info.getObject());
+
 				continueToOriginalDestination();
+
+				// switch to home page if no original destination was intercepted
+				setResponsePage(getApplication().getHomePage());
 			}
 		};
 		add(browserInfoForm);
 	}
+	
+	protected ClientProperties newClientInfo()
+	{
+		return WebSession.get().getClientInfo().getProperties();
+	}
+
+	private static class ContinueLink extends Link<WebClientInfo> {
+
+		public ContinueLink(String id, IModel<WebClientInfo> info)
+		{
+			super(id, info);
+		}
+
+		@Override
+		public void renderHead(IHeaderResponse response)
+		{
+			String content = "0; url=" + getURL();
+
+			response.render(new MetaDataHeaderItem(MetaDataHeaderItem.META_TAG).addTagAttribute("http-equiv", "refresh").addTagAttribute("content", content));
+		}
+		
+		@Override
+		public void onClick()
+		{
+			getModelObject().getProperties().setJavaScriptEnabled(false);
+
+			WebSession.get().setClientInfo(getModelObject());
+
+			continueToOriginalDestination();
+
+			// switch to home page if no original destination was intercepted
+			setResponsePage(getApplication().getHomePage());
+		}
+	};
 }

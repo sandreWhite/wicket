@@ -17,6 +17,7 @@
 package org.apache.wicket;
 
 import org.apache.wicket.markup.html.link.Link;
+import org.apache.wicket.util.tester.WicketTestCase;
 import org.junit.Test;
 
 /**
@@ -31,7 +32,7 @@ public class MarkupIdGeneratorTest extends WicketTestCase
 	public void defaultMarkupIdGenerator()
 	{
 		MockPageWithLink page = new MockPageWithLink();
-		Link link = new Link(MockPageWithLink.LINK_ID)
+		Link link = new Link<Void>(MockPageWithLink.LINK_ID)
 		{
 			@Override
 			public void onClick()
@@ -58,7 +59,7 @@ public class MarkupIdGeneratorTest extends WicketTestCase
 		};
 		tester.getApplication().getMarkupSettings().setMarkupIdGenerator(generator);
 		MockPageWithLink page = new MockPageWithLink();
-		Link link = new Link(MockPageWithLink.LINK_ID)
+		Link link = new Link<Void>(MockPageWithLink.LINK_ID)
 		{
 			@Override
 			public void onClick()

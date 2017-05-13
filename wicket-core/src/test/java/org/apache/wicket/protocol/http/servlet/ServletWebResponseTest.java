@@ -115,7 +115,7 @@ public class ServletWebResponseTest extends Assert
 		ServletWebResponse webResponse = new ServletWebResponse(webRequest, httpServletResponse);
 		webResponse.sendRedirect(url);
 
-		verify(httpServletResponse).sendRedirect("relative/path");
+		verify(httpServletResponse).sendRedirect("./relative/path");
 		assertTrue(webResponse.isRedirect());
 	}
 
@@ -130,10 +130,10 @@ public class ServletWebResponseTest extends Assert
 		HttpServletResponse httpResponse = new MockHttpServletResponse(httpRequest);
 		ServletWebResponse response = new ServletWebResponse(webRequest, httpResponse);
 
-		response.setInlineHeader("name with spaces");
+		response.setInlineHeader("name with spaces and;,");
 		String header = httpResponse.getHeader("Content-Disposition");
 		assertEquals(
-			"inline; filename=\"name%20with%20spaces\"; filename*=UTF-8''name%20with%20spaces",
+			"inline; filename=\"name%20with%20spaces%20and%3B%2C\"; filename*=UTF-8''name%20with%20spaces%20and%3B%2C",
 			header);
 
 		// says: "name with bulgarian"

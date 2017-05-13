@@ -58,6 +58,10 @@
 
 				url = protocol + '//' + document.location.host + WWS.contextPath + WWS.filterPrefix + '/wicket/websocket';
 
+				if (WWS.sessionId !== '') {
+					url += ';jsessionid=' + encodeURIComponent(WWS.sessionId);
+				}
+
 				if (WWS.pageId !== false) {
 					url += '?pageId=' + encodeURIComponent(WWS.pageId);
 				} else if (WWS.resourceName) {
@@ -66,6 +70,7 @@
 
 				url += '&wicket-ajax-baseurl=' + encodeURIComponent(WWS.baseUrl);
 				url += '&wicket-app-name=' + encodeURIComponent(WWS.appName);
+
 				self.ws = new WebSocket(url);
 
 				self.ws.onopen = function (evt) {
@@ -75,7 +80,7 @@
 				self.ws.onmessage = function (event) {
 
 					var message = event.data;
-					if (message && message.indexOf('<ajax-response>') > -1) {
+					if (typeof(message) === 'string' && message.indexOf('<ajax-response>') > -1) {
 						var call = new Wicket.Ajax.Call();
 						call.process(message);
 					}

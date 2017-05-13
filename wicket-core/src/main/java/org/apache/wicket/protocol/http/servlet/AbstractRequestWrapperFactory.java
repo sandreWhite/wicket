@@ -26,7 +26,7 @@ import org.apache.wicket.util.lang.Generics;
 import org.apache.wicket.util.string.Strings;
 
 /**
- * Abstract base class for HttpServletRequestWrapper
+ * A factory of {@link HttpServletRequest} wrappers.
  * 
  * @author Juergen Donnerstag
  */
@@ -48,7 +48,7 @@ public abstract class AbstractRequestWrapperFactory
 
 	/**
 	 * 
-	 * @return True, if filter is enabled
+	 * @return {@code true} if filter is enabled
 	 */
 	public final boolean isEnabled()
 	{
@@ -66,7 +66,9 @@ public abstract class AbstractRequestWrapperFactory
 	}
 
 	/**
-	 * @param request
+	 * Wrap the given request.
+	 * 
+	 * @param request request to wrap
 	 * @return Either return the request itself, or if needed a wrapper for the request
 	 */
 	public HttpServletRequest getWrapper(final HttpServletRequest request)
@@ -82,13 +84,13 @@ public abstract class AbstractRequestWrapperFactory
 	 * @param request
 	 * @return True, if a wrapper is needed
 	 */
-	abstract boolean needsWrapper(final HttpServletRequest request);
+	protected abstract boolean needsWrapper(final HttpServletRequest request);
 
 	/**
 	 * @param request
 	 * @return Create a wrapper for the request
 	 */
-	abstract public HttpServletRequest newRequestWrapper(HttpServletRequest request);
+	public abstract HttpServletRequest newRequestWrapper(HttpServletRequest request);
 
 	/**
 	 * Convert a given comma delimited list of regular expressions into an array of compiled

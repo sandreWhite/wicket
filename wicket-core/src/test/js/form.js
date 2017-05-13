@@ -134,6 +134,40 @@ jQuery(document).ready(function() {
 		Wicket.Form.excludeFromAjaxSerialization = null;
 	});
 
+	test("Wicket.Form.serializeElement should serialize the HTMLFormElement's which a children of a non-HTMLFormElement", function() {
+		expect(1);
+
+		var actual = Wicket.Form.serializeElement('nonHtmlFormElement', true);
+
+		var expected = [
+			{ name: "textInput",      value: "textValue"          },
+			{ name: "textUTFInput",      value: "нещо на български"          },
+			{ name: "checkBoxInput1", value: "cbValue1"           },
+			{ name: "checkBoxInput3", value: "cbValue3"           },
+			{ name: "radioInput",     value: "radioValue1"        },
+			{ name: "emailInput",     value: "m@g.com"            },
+			{ name: "urlInput",       value: "http://example.com" },
+			{ name: "searchInput",    value: "wicket"             },
+			{ name: "rangeInput",     value: "67"                 },
+			{ name: "numberInput",    value: "16"                 },
+			{ name: "colorInput",     value: "#123456"            },
+			{ name: "multipleSelect", value: "0"                  },
+			{ name: "multipleSelect", value: "2"                  },
+			{ name: "select",         value: "0"                  },
+			{ name: "textArea",       value: "some text"          }
+		];
+		deepEqual(actual, expected);
+	});
+
+	test("Wicket.Form.serializeElement should serialize the HTMLFormElement's which a children of a non-HTMLFormElement", function() {
+		expect(1);
+
+		var actual = Wicket.Form.serializeElement('nonHtmlFormElement', false);
+
+		var expected = [];
+		deepEqual(actual, expected);
+	});
+
 	module('Wicket.Form.serializeForm');
 
 	test('Wicket.Form.serialize - form element WITHOUT searching for the parent form', function() {
@@ -159,7 +193,8 @@ jQuery(document).ready(function() {
 		});
 
 		queryString = jQuery.param(queryString, true);
-		equal(queryString, 'textInput=textValue&textUTFInput=%D0%BD%D0%B5%D1%89%D0%BE+%D0%BD%D0%B0+%D0%B1%D1%8A%D0%BB%D0%B3%D0%B0%D1%80%D1%81%D0%BA%D0%B8&checkBoxInput1=cbValue1&checkBoxInput3=cbValue3&radioInput=radioValue1&emailInput=m%40g.com&urlInput=http%3A%2F%2Fexample.com&searchInput=wicket&rangeInput=67&numberInput=16&colorInput=%23123456&multipleSelect=0&multipleSelect=2&select=0&textArea=some+text', 'Wicket.Form.serialize should serialize the whole form when an element is passed and the parent form should be searched');
+		var space = jQuery.fn.jquery.indexOf("3") === 0 ? "%20" : "+";
+		equal(queryString, 'textInput=textValue&textUTFInput=%D0%BD%D0%B5%D1%89%D0%BE'+space+'%D0%BD%D0%B0'+space+'%D0%B1%D1%8A%D0%BB%D0%B3%D0%B0%D1%80%D1%81%D0%BA%D0%B8&checkBoxInput1=cbValue1&checkBoxInput3=cbValue3&radioInput=radioValue1&emailInput=m%40g.com&urlInput=http%3A%2F%2Fexample.com&searchInput=wicket&rangeInput=67&numberInput=16&colorInput=%23123456&multipleSelect=0&multipleSelect=2&select=0&textArea=some'+space+'text', 'Wicket.Form.serialize should serialize the whole form when an element is passed and the parent form should be searched');
 	});
 
 
@@ -173,7 +208,8 @@ jQuery(document).ready(function() {
 		});
 
 		queryString = jQuery.param(queryString, true);
-		equal(queryString, 'textInput=textValue&textUTFInput=%D0%BD%D0%B5%D1%89%D0%BE+%D0%BD%D0%B0+%D0%B1%D1%8A%D0%BB%D0%B3%D0%B0%D1%80%D1%81%D0%BA%D0%B8&checkBoxInput1=cbValue1&checkBoxInput3=cbValue3&radioInput=radioValue1&emailInput=m%40g.com&urlInput=http%3A%2F%2Fexample.com&searchInput=wicket&rangeInput=67&numberInput=16&colorInput=%23123456&multipleSelect=0&multipleSelect=2&select=0&textArea=some+text', 'Wicket.Form.serialize should serialize the whole form when a the form itself is passed');
+		var space = jQuery.fn.jquery.indexOf("3") === 0 ? "%20" : "+";
+		equal(queryString, 'textInput=textValue&textUTFInput=%D0%BD%D0%B5%D1%89%D0%BE'+space+'%D0%BD%D0%B0'+space+'%D0%B1%D1%8A%D0%BB%D0%B3%D0%B0%D1%80%D1%81%D0%BA%D0%B8&checkBoxInput1=cbValue1&checkBoxInput3=cbValue3&radioInput=radioValue1&emailInput=m%40g.com&urlInput=http%3A%2F%2Fexample.com&searchInput=wicket&rangeInput=67&numberInput=16&colorInput=%23123456&multipleSelect=0&multipleSelect=2&select=0&textArea=some'+space+'text', 'Wicket.Form.serialize should serialize the whole form when a the form itself is passed');
 	});
 
 	test('Wicket.Form.serializeForm - serialize nested form (div element)', function() {

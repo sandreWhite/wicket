@@ -87,7 +87,7 @@ public class JavaxUpgradeHttpRequest implements HttpServletRequest
 			{
 				String name = entry.getKey();
 				List<String> value = entry.getValue();
-				parametersMap.put(name, value.toArray(new String[value.size()]));
+				parametersMap.put(name, value.toArray(new String[0]));
 			}
 		}
 	}
@@ -254,7 +254,7 @@ public class JavaxUpgradeHttpRequest implements HttpServletRequest
 	@Override
 	public StringBuffer getRequestURL()
 	{
-		return null;
+		return new StringBuffer(requestUri);
 	}
 
 	@Override

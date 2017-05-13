@@ -19,7 +19,7 @@ package org.apache.wicket.util.tester;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.io.Serializable;
@@ -52,7 +52,6 @@ import org.apache.wicket.protocol.http.WebApplication;
 import org.apache.wicket.request.mapper.parameter.PageParameters;
 import org.apache.wicket.util.lang.Args;
 import org.apache.wicket.util.lang.Objects;
-import org.hamcrest.core.IsCollectionContaining;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -232,6 +231,34 @@ public class WicketTester extends BaseWicketTester
 	{
 		super(application, servletCtx);
 	}
+	
+	/**
+	 * Creates a <code>WicketTester</code> to help unit testing.
+	 * 
+	 * @param application
+	 *            a <code>WicketTester</code> <code>WebApplication</code> object
+	 * @param init
+	 *            force the application to be initialized (default = true)
+	 */
+	public WicketTester(WebApplication application, boolean init)
+	{
+		super(application, init);
+	}
+	
+	/**
+	 * Creates a <code>WicketTester</code> to help unit testing.
+	 * 
+	 * @param application
+	 *            a <code>WicketTester</code> <code>WebApplication</code> object
+	 * @param servletCtx
+	 *            the servlet context used as backend
+	 * @param init
+	 *            force the application to be initialized (default = true)
+	 */
+	public WicketTester(WebApplication application, ServletContext servletCtx, boolean init)
+	{
+		super(application, servletCtx, init);
+	}
 
 	/**
 	 * Asserts that the Ajax location header is present.
@@ -301,14 +328,15 @@ public class WicketTester extends BaseWicketTester
 	 */
 	public void assertComponentOnAjaxResponse(String componentPath)
 	{
-		assertComponentOnAjaxResponse(getComponentFromLastRenderedPage(componentPath, false));
+		Component component = getComponentFromLastRenderedPage(componentPath, false);
+		assertComponentOnAjaxResponse(component);
 	}
 
 	/**
 	 * Asserts the content of last rendered page contains (matches) a given regex pattern.
 	 * 
 	 * @param pattern
-	 *            a reqex pattern to match
+	 *            a regex pattern to match
 	 */
 	public void assertContains(String pattern)
 	{
@@ -350,12 +378,13 @@ public class WicketTester extends BaseWicketTester
 	}
 
 	/**
-	 * Asserts that a component's markup has loaded with the given style
+	 * Asserts that a component's markup has loaded with the given style.
 	 *
 	 * @param component
 	 *              The component which markup to check
 	 * @param expectedStyle
-	 *              The expected style of the component's markup
+	 *              The expected style of the component's markup.
+	 *              For example: <em>green</em> in <code>MyPanel_green.html</code>
 	 */
 	public void assertMarkupStyle(Component component, String expectedStyle)
 	{
@@ -475,8 +504,8 @@ public class WicketTester extends BaseWicketTester
 		List<FeedbackMessage> feedbackMessages = getFeedbackMessages(filter);
 		List<Serializable> actualMessages = getActualFeedbackMessages(feedbackMessages);
 
-		assertThat(String.format("Feedback message with key '%s' cannot be found", key),
-				actualMessages, IsCollectionContaining.hasItem(expectedMessage));
+		assertTrue(String.format("Feedback message with key '%s' cannot be found in %s", key, actualMessages),
+				actualMessages.contains(expectedMessage));
 	}
 
 	/**
@@ -622,6 +651,9 @@ public class WicketTester extends BaseWicketTester
 
 	/**
 	 * Asserts there are no feedback messages with a certain level.
+	 * 
+	 * @param level
+	 *            the level to check for
 	 */
 	public void assertNoFeedbackMessage(int level)
 	{
@@ -717,6 +749,17 @@ public class WicketTester extends BaseWicketTester
 	public void assertRequired(String path)
 	{
 		assertResult(isRequired(path));
+	}
+
+	/**
+	 * assert form component is required.
+	 *
+	 * @param path
+	 *            path to form component
+	 */
+	public void assertNotRequired(String path)
+	{
+		assertResult(isNotRequired(path));
 	}
 
 	/**

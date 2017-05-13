@@ -25,6 +25,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 import org.apache.wicket.application.IClassResolver;
 import org.apache.wicket.authorization.IAuthorizationStrategy;
@@ -39,7 +40,6 @@ import org.apache.wicket.page.PageAccessSynchronizer;
 import org.apache.wicket.request.Request;
 import org.apache.wicket.request.cycle.RequestCycle;
 import org.apache.wicket.session.ISessionStore;
-import org.apache.wicket.util.IProvider;
 import org.apache.wicket.util.LazyInitializer;
 import org.apache.wicket.util.io.IClusterable;
 import org.apache.wicket.util.lang.Args;
@@ -123,7 +123,7 @@ public abstract class Session implements IClusterable, IEventSink
 	private final AtomicInteger pageId = new AtomicInteger(0);
 
 	/** synchronize page's access by session */
-	private final IProvider<PageAccessSynchronizer> pageAccessSynchronizer;
+	private final Supplier<PageAccessSynchronizer> pageAccessSynchronizer;
 
 	/**
 	 * Checks existence of a <code>Session</code> associated with the current thread.
@@ -488,10 +488,20 @@ public abstract class Session implements IClusterable, IEventSink
 	 */
 	private void destroy()
 	{
-		if (sessionStore != null)
+		if (getSessionStore() != null)
 		{
 			sessionStore.invalidate(RequestCycle.get().getRequest());
 			sessionStore = null;
+			id = null;
+			sessionInvalidated = false;
+			clientInfo = null;
+			dirty = false;
+			metaData = null;
+			feedbackMessages.clear();
+			setStyle(null);
+			pageId.set(0);
+			sequence.set(0);
+			temporarySessionAttributes = null;
 		}
 	}
 
@@ -501,7 +511,9 @@ public abstract class Session implements IClusterable, IEventSink
 	 */
 	public void invalidateNow()
 	{
-		invalidate();
+		if (isSessionInvalidated() == false) {
+			invalidate();
+		}
 		destroy();
 	}
 

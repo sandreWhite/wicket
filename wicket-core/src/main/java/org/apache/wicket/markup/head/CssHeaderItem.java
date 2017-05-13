@@ -16,7 +16,9 @@
  */
 package org.apache.wicket.markup.head;
 
-import org.apache.wicket.ajax.AjaxRequestTarget;
+import java.util.Objects;
+
+import org.apache.wicket.core.request.handler.IPartialPageRequestHandler;
 import org.apache.wicket.core.util.string.CssUtils;
 import org.apache.wicket.request.Response;
 import org.apache.wicket.request.cycle.RequestCycle;
@@ -275,7 +277,7 @@ public abstract class CssHeaderItem extends HeaderItem
 		boolean hasCondition = Strings.isEmpty(condition) == false; 
 		if (hasCondition)
 		{
-			if (RequestCycle.get().find(AjaxRequestTarget.class) != null)
+			if (RequestCycle.get().find(IPartialPageRequestHandler.class).isPresent())
 			{
 				// WICKET-4894
 				logger.warn("IE CSS engine doesn't support dynamically injected links in " +
@@ -295,5 +297,21 @@ public abstract class CssHeaderItem extends HeaderItem
 			response.write("<![endif]-->");
 		}
 		response.write("\n");
+	}
+
+	@Override
+	public boolean equals(Object o)
+	{
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
+		CssHeaderItem that = (CssHeaderItem) o;
+		return Objects.equals(condition, that.condition) &&
+				Objects.equals(markupId, that.markupId);
+	}
+
+	@Override
+	public int hashCode()
+	{
+		return Objects.hash(condition, markupId);
 	}
 }

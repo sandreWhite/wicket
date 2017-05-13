@@ -24,6 +24,7 @@ import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import org.apache.wicket.Component;
@@ -293,12 +294,9 @@ public final class EnhancedPageView extends GenericPanel<Page>
 			private static final long serialVersionUID = 1L;
 
 			@Override
-			protected void onAfterSubmit(AjaxRequestTarget target, Form<?> form)
+			protected void onAfterSubmit(Optional<AjaxRequestTarget> target)
 			{
-				if (target != null)
-				{
-					target.add(componentTree);
-				}
+				target.ifPresent(t -> t.add(componentTree));
 			}
 		});
 
@@ -307,12 +305,10 @@ public final class EnhancedPageView extends GenericPanel<Page>
 		{
 			private static final long serialVersionUID = 1L;
 
-			@Override
-			public void onClick(AjaxRequestTarget target)
+			public void onClick(Optional<AjaxRequestTarget> targetOptional)
 			{
 				expandState.expandAll();
-				if (target != null)
-					target.add(componentTree);
+				targetOptional.ifPresent(target -> target.add(componentTree));
 			}
 		});
 		add(new AjaxFallbackLink<Void>("collapseAll")
@@ -320,11 +316,10 @@ public final class EnhancedPageView extends GenericPanel<Page>
 			private static final long serialVersionUID = 1L;
 
 			@Override
-			public void onClick(AjaxRequestTarget target)
+			public void onClick(Optional<AjaxRequestTarget> targetOptional)
 			{
 				expandState.collapseAll();
-				if (target != null)
-					target.add(componentTree);
+				targetOptional.ifPresent(target -> target.add(componentTree));
 			}
 		});
 	}

@@ -17,12 +17,14 @@
 package org.apache.wicket.protocol.http;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.Collection;
 import java.util.TimeZone;
 
 import javax.servlet.http.Cookie;
 
 import org.apache.wicket.markup.html.pages.BrowserInfoPage;
+import org.apache.wicket.request.IRequestParameters;
 import org.apache.wicket.request.cycle.RequestCycle;
 import org.apache.wicket.request.http.WebRequest;
 import org.apache.wicket.util.io.IClusterable;
@@ -65,8 +67,8 @@ public class ClientProperties implements IClusterable
 	private int browserVersionMajor = -1;
 	private int browserVersionMinor = -1;
 	private int browserWidth = -1;
-	private boolean cookiesEnabled;
-	private boolean javaEnabled;
+	private boolean navigatorCookieEnabled;
+	private boolean navigatorJavaEnabled;
 	private String navigatorAppCodeName;
 	private String navigatorAppName;
 	private String navigatorAppVersion;
@@ -77,13 +79,14 @@ public class ClientProperties implements IClusterable
 	private int screenColorDepth = -1;
 	private int screenHeight = -1;
 	private int screenWidth = -1;
-	/** Cached timezone for repeating calls to {@link #getTimeZone()} */
-	private TimeZone timeZone;
 	private String utcDSTOffset;
-
 	private String utcOffset;
-
 	private String hostname;
+
+	private boolean javaScriptEnabled;
+
+	/** Cached timezone for repeating calls to {@link #getTimeZone()} */
+	private transient TimeZone timeZone;
 
 	/**
 	 * @return The browser height at the time it was measured
@@ -331,7 +334,7 @@ public class ClientProperties implements IClusterable
 	}
 
 	/**
-	 * @return The client's time DST offset from UTC in minutes (note: if you do this yourself, use
+	 * @return The client's time DST offset from UTC in hours (note: if you do this yourself, use
 	 *         'new Date(new Date().getFullYear(), 0, 6, 0, 0, 0, 0).getTimezoneOffset() / -60'
 	 *         (note the -)).
 	 */
@@ -342,13 +345,22 @@ public class ClientProperties implements IClusterable
 
 
 	/**
-	 * @return The client's time offset from UTC in minutes (note: if you do this yourself, use 'new
+	 * @return The client's time offset from UTC in hours (note: if you do this yourself, use 'new
 	 *         Date(new Date().getFullYear(), 0, 1, 0, 0, 0, 0).getTimezoneOffset() / -60' (note the
 	 *         -)).
 	 */
 	public String getUtcOffset()
 	{
 		return utcOffset;
+	}
+
+	/**
+	 * Flag indicating support of JavaScript in the browser.
+	 * 
+	 * @return True if JavaScript is enabled
+	 */
+	public boolean isJavaScriptEnabled() {
+		return javaScriptEnabled;
 	}
 
 	/**
@@ -428,22 +440,22 @@ public class ClientProperties implements IClusterable
 	 * 
 	 * @return The client's navigator.cookieEnabled property.
 	 */
-	public boolean isCookiesEnabled()
+	public boolean isNavigatorCookieEnabled()
 	{
-		if (!cookiesEnabled && RequestCycle.get() != null)
+		if (!navigatorCookieEnabled && RequestCycle.get() != null)
 		{
 			Collection<Cookie> cookies = ((WebRequest)RequestCycle.get().getRequest()).getCookies();
-			cookiesEnabled = cookies != null && cookies.size() > 0;
+			navigatorCookieEnabled = cookies != null && cookies.size() > 0;
 		}
-		return cookiesEnabled;
+		return navigatorCookieEnabled;
 	}
 
 	/**
 	 * @return The client's navigator.javaEnabled property.
 	 */
-	public boolean isJavaEnabled()
+	public boolean isNavigatorJavaEnabled()
 	{
-		return javaEnabled;
+		return navigatorJavaEnabled;
 	}
 
 	/**
@@ -565,18 +577,18 @@ public class ClientProperties implements IClusterable
 	 * @param cookiesEnabled
 	 *            The client's navigator.cookieEnabled property.
 	 */
-	public void setCookiesEnabled(boolean cookiesEnabled)
+	public void setNavigatorCookieEnabled(boolean cookiesEnabled)
 	{
-		this.cookiesEnabled = cookiesEnabled;
+		this.navigatorCookieEnabled = cookiesEnabled;
 	}
 
 	/**
 	 * @param navigatorJavaEnabled
 	 *            The client's navigator.javaEnabled property.
 	 */
-	public void setJavaEnabled(boolean navigatorJavaEnabled)
+	public void setNavigatorJavaEnabled(boolean navigatorJavaEnabled)
 	{
-		javaEnabled = navigatorJavaEnabled;
+		this.navigatorJavaEnabled = navigatorJavaEnabled;
 	}
 
 	/**
@@ -706,20 +718,32 @@ public class ClientProperties implements IClusterable
 		this.utcOffset = utcOffset;
 	}
 
+	/**
+	 * @param javaScriptEnabled
+	 *            is JavaScript supported in the browser
+	 */
+	public void setJavaScriptEnabled(boolean javaScriptEnabled) {
+		this.javaScriptEnabled = javaScriptEnabled;
+	}
+
 	@Override
 	public String toString()
 	{
 		StringBuilder b = new StringBuilder();
 
-		Field[] fields = ClientProperties.class.getDeclaredFields();
+		Class<?> clazz = getClass();
+		while (clazz != Object.class) {
+			Field[] fields = clazz.getDeclaredFields();
 
-		for (Field field : fields)
-		{
-			// Ignore these fields
-			if (field.getName().equals("serialVersionUID") == false &&
-				field.getName().startsWith("class$") == false &&
-				field.getName().startsWith("timeZone") == false)
+			for (Field field : fields)
 			{
+				// Ignore these fields
+				if (Modifier.isStatic(field.getModifiers()) ||
+					Modifier.isTransient(field.getModifiers())  ||
+					field.isSynthetic())
+				{
+					continue;
+				}
 
 				field.setAccessible(true);
 
@@ -753,9 +777,35 @@ public class ClientProperties implements IClusterable
 					b.append('\n');
 				}
 			}
-		}
 
+			clazz = clazz.getSuperclass();
+		}
 		return b.toString();
 	}
 
+	/**
+	 * Read parameters.
+	 * 
+	 * @param parameters
+	 *            parameters sent from browser
+	 */
+	public void read(IRequestParameters parameters)
+	{
+		setNavigatorAppCodeName(parameters.getParameterValue("navigatorAppCodeName").toString("N/A"));
+		setNavigatorAppName(parameters.getParameterValue("navigatorAppName").toString("N/A"));
+		setNavigatorAppVersion(parameters.getParameterValue("navigatorAppVersion").toString("N/A"));
+		setNavigatorCookieEnabled(parameters.getParameterValue("navigatorCookieEnabled").toBoolean(false));
+		setNavigatorJavaEnabled(parameters.getParameterValue("navigatorJavaEnabled").toBoolean(false));
+		setNavigatorLanguage(parameters.getParameterValue("navigatorLanguage").toString("N/A"));
+		setNavigatorPlatform(parameters.getParameterValue("navigatorPlatform").toString("N/A"));
+		setNavigatorUserAgent(parameters.getParameterValue("navigatorUserAgent").toString("N/A"));
+		setScreenWidth(parameters.getParameterValue("screenWidth").toInt(-1));
+		setScreenHeight(parameters.getParameterValue("screenHeight").toInt(-1));
+		setScreenColorDepth(parameters.getParameterValue("screenColorDepth").toInt(-1));
+		setUtcOffset(parameters.getParameterValue("utcOffset").toString(null));
+		setUtcDSTOffset(parameters.getParameterValue("utcDSTOffset").toString(null));
+		setBrowserWidth(parameters.getParameterValue("browserWidth").toInt(-1));
+		setBrowserHeight(parameters.getParameterValue("browserHeight").toInt(-1));
+		setHostname(parameters.getParameterValue("hostname").toString("N/A"));
+	}
 }

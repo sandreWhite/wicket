@@ -19,7 +19,7 @@ package org.apache.wicket.extensions.ajax.markup.html.autocomplete;
 import java.util.Iterator;
 
 import org.apache.wicket.Application;
-import org.apache.wicket.ajax.attributes.AjaxRequestAttributes;
+import org.apache.wicket.Component;
 import org.apache.wicket.request.IRequestCycle;
 import org.apache.wicket.request.IRequestHandler;
 import org.apache.wicket.request.cycle.RequestCycle;
@@ -87,15 +87,6 @@ public abstract class AutoCompleteBehavior<T> extends AbstractAutoCompleteBehavi
 	}
 
 	@Override
-	protected void updateAjaxAttributes(AjaxRequestAttributes attributes)
-	{
-		super.updateAjaxAttributes(attributes);
-
-		attributes.setWicketAjaxResponse(false);
-		attributes.setDataType("html");
-	}
-
-	@Override
 	protected final void onRequest(final String val, final RequestCycle requestCycle)
 	{
 		IRequestHandler target = new IRequestHandler()
@@ -124,11 +115,6 @@ public abstract class AutoCompleteBehavior<T> extends AbstractAutoCompleteBehavi
 				}
 				renderer.renderFooter(r, count);
 			}
-
-			@Override
-			public void detach(final IRequestCycle requestCycle)
-			{
-			}
 		};
 
 		requestCycle.scheduleRequestHandlerAfterCurrent(target);
@@ -144,4 +130,10 @@ public abstract class AutoCompleteBehavior<T> extends AbstractAutoCompleteBehavi
 	 * @return iterator over all possible choice objects
 	 */
 	protected abstract Iterator<T> getChoices(String input);
+
+	@Override
+	public void detach(Component component)
+	{
+		renderer.detach();
+	}
 }

@@ -18,36 +18,31 @@ package org.apache.wicket.protocol.ws.api;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.Collections;
 
 import org.apache.wicket.Component;
 import org.apache.wicket.MarkupContainer;
 import org.apache.wicket.Page;
-import org.apache.wicket.ajax.AbstractAjaxResponse;
-import org.apache.wicket.ajax.AjaxRequestTarget;
-import org.apache.wicket.ajax.XmlAjaxResponse;
 import org.apache.wicket.core.request.handler.logger.PageLogData;
 import org.apache.wicket.markup.head.IHeaderResponse;
+import org.apache.wicket.page.PartialPageUpdate;
+import org.apache.wicket.page.XmlPartialPageUpdate;
 import org.apache.wicket.request.ILogData;
 import org.apache.wicket.request.IRequestCycle;
-import org.apache.wicket.request.Response;
 import org.apache.wicket.request.component.IRequestablePage;
-import org.apache.wicket.request.http.WebRequest;
 import org.apache.wicket.request.mapper.parameter.PageParameters;
 import org.apache.wicket.util.lang.Args;
-import org.apache.wicket.util.string.Strings;
 import org.apache.wicket.util.visit.IVisit;
 import org.apache.wicket.util.visit.IVisitor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * An extension of AjaxRequestTarget that also supports pushing data from the server to the
- * client.
+ * A handler of WebSocket requests.
  *
  * @since 6.0
  */
-public class WebSocketRequestHandler implements AjaxRequestTarget, IWebSocketRequestHandler
+public class WebSocketRequestHandler implements IWebSocketRequestHandler
 {
 	private static final Logger LOG = LoggerFactory.getLogger(WebSocketRequestHandler.class);
 
@@ -55,13 +50,7 @@ public class WebSocketRequestHandler implements AjaxRequestTarget, IWebSocketReq
 
 	private final IWebSocketConnection connection;
 
-	private final AbstractAjaxResponse ajaxResponse;
-
-	/**
-	 * A flag indicating that there is data to be written to construct an &lt;ajax-response&gt;
-	 * There is no need to push empty Ajax response if only #push() is used
-	 */
-	private final AtomicBoolean hasData = new AtomicBoolean(false);
+	private PartialPageUpdate update;
 
 	private PageLogData logData;
 
@@ -69,18 +58,6 @@ public class WebSocketRequestHandler implements AjaxRequestTarget, IWebSocketReq
 	{
 		this.page = Args.notNull(component, "component").getPage();
 		this.connection = Args.notNull(connection, "connection");
-		this.ajaxResponse = new XmlAjaxResponse(page)
-		{
-			@Override
-			protected void fireOnAfterRespondListeners(Response response)
-			{
-			}
-
-			@Override
-			protected void fireOnBeforeRespondListeners()
-			{
-			}
-		};
 	}
 
 	@Override
@@ -126,8 +103,14 @@ public class WebSocketRequestHandler implements AjaxRequestTarget, IWebSocketReq
 	@Override
 	public void add(Component component, String markupId)
 	{
-		hasData.set(true);
-		ajaxResponse.add(component, markupId);
+		getUpdate().add(component, markupId);
+	}
+
+	private PartialPageUpdate getUpdate() {
+		if (update == null) {
+			update = new XmlPartialPageUpdate(page);
+		}
+		return update;
 	}
 
 	@Override
@@ -141,6 +124,13 @@ public class WebSocketRequestHandler implements AjaxRequestTarget, IWebSocketReq
 			{
 				throw new IllegalArgumentException(
 						"cannot update component that does not have setOutputMarkupId property set to true. Component: " +
+								component.toString());
+			}
+			else if (component.getPage() != getPage())
+			{
+				throw new IllegalArgumentException(
+						"Cannot update component because its page is not the same as " +
+						"the one this handler has been created for. Component: " +
 								component.toString());
 			}
 			add(component, component.getMarkupId());
@@ -165,33 +155,25 @@ public class WebSocketRequestHandler implements AjaxRequestTarget, IWebSocketReq
 	}
 
 	@Override
-	public void addListener(IListener listener)
-	{
-	}
-
-	@Override
 	public void appendJavaScript(CharSequence javascript)
 	{
-		hasData.set(true);
-		ajaxResponse.appendJavaScript(javascript);
+		getUpdate().appendJavaScript(javascript);
 	}
 
 	@Override
 	public void prependJavaScript(CharSequence javascript)
 	{
-		hasData.set(true);
-		ajaxResponse.prependJavaScript(javascript);
-	}
-
-	@Override
-	public void registerRespondListener(ITargetRespondListener listener)
-	{
+		getUpdate().prependJavaScript(javascript);
 	}
 
 	@Override
 	public Collection<? extends Component> getComponents()
 	{
-		return ajaxResponse.getComponents();
+		if (update == null) {
+			return Collections.emptyList();
+		} else {
+			return update.getComponents();
+		}
 	}
 
 	@Override
@@ -210,16 +192,7 @@ public class WebSocketRequestHandler implements AjaxRequestTarget, IWebSocketReq
 	@Override
 	public IHeaderResponse getHeaderResponse()
 	{
-		hasData.set(true);
-		return ajaxResponse.getHeaderResponse();
-	}
-
-	@Override
-	public String getLastFocusedElementId()
-	{
-		WebRequest request = (WebRequest) page.getRequest();
-		String id = request.getHeader("Wicket-FocusedElementId");
-		return Strings.isEmpty(id) ? null : id;
+		return getUpdate().getHeaderResponse();
 	}
 
 	@Override
@@ -267,9 +240,9 @@ public class WebSocketRequestHandler implements AjaxRequestTarget, IWebSocketReq
 	@Override
 	public void respond(IRequestCycle requestCycle)
 	{
-		if (hasData.get())
+		if (update != null)
 		{
-			ajaxResponse.writeTo(requestCycle.getResponse(), "UTF-8");
+			update.writeTo(requestCycle.getResponse(), "UTF-8");
 		}
 	}
 
@@ -281,7 +254,9 @@ public class WebSocketRequestHandler implements AjaxRequestTarget, IWebSocketReq
 			logData = new PageLogData(page);
 		}
 
-		ajaxResponse.detach(requestCycle);
-		hasData.set(false);
+		if (update != null) {
+			update.detach(requestCycle);
+			update = null;
+		}
 	}
 }

@@ -16,12 +16,15 @@
  */
 package org.apache.wicket.markup.html.internal;
 
+import java.util.Iterator;
+
 import org.apache.wicket.Component;
 import org.apache.wicket.MarkupContainer;
 import org.apache.wicket.WicketRuntimeException;
 import org.apache.wicket.markup.ComponentTag;
 import org.apache.wicket.markup.MarkupException;
 import org.apache.wicket.markup.MarkupStream;
+import org.apache.wicket.markup.html.TransparentWebMarkupContainer;
 import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.markup.html.basic.EnclosureContainer;
 import org.apache.wicket.markup.parser.filter.EnclosureHandler;
@@ -125,7 +128,7 @@ public class Enclosure extends WebMarkupContainer implements IComponentResolver
 		if (childComponent == null)
 		{
 			// try to find child when queued
-			childComponent = get(childId);
+			childComponent = resolveChild(this);
 		}
 		if (childComponent == null)
 		{
@@ -134,13 +137,51 @@ public class Enclosure extends WebMarkupContainer implements IComponentResolver
 		}
 		return childComponent;
 	}
+	
+	/**
+	 * Searches for the controlling child component looking also 
+	 * through transparent components.
+	 * 
+	 * @param container
+	 * 			the current container
+	 * @return the controlling child component, null if no one is found 
+	 */
+	private Component resolveChild(MarkupContainer container)
+	{
+		Component childController = container.get(childId);
+		
+		Iterator<Component> children = container.iterator();
+		
+		while (children.hasNext() && childController == null)
+		{
+			Component transparentChild = children.next();
+			
+			if(transparentChild instanceof TransparentWebMarkupContainer)
+			{
+				childController = resolveChild((MarkupContainer)transparentChild);
+			}
+		}
+		
+		return childController;
+	}
 
 	@Override
 	public boolean isVisible()
 	{
 		return getChild().determineVisibility();
 	}
-
+	
+	@Override
+	protected void onConfigure()
+	{
+		super.onConfigure();
+		final Component child = getChild();
+		
+		child.configure();
+		boolean childVisible = child.determineVisibility();
+		
+		setVisible(childVisible);
+	}
 
 	@Override
 	protected void onDetach()
@@ -150,6 +191,7 @@ public class Enclosure extends WebMarkupContainer implements IComponentResolver
 		// necessary when queued and lives with the page instead of just during render
 		childComponent = null;
 	}
+	
 	/**
 	 * Get the real parent container
 	 * 
@@ -158,11 +200,7 @@ public class Enclosure extends WebMarkupContainer implements IComponentResolver
 	protected MarkupContainer getEnclosureParent()
 	{
 		MarkupContainer parent = getParent();
-		while ((parent != null) && parent.isAuto())
-		{
-			parent = parent.getParent();
-		}
-
+		
 		if (parent == null)
 		{
 			throw new WicketRuntimeException(
@@ -191,7 +229,7 @@ public class Enclosure extends WebMarkupContainer implements IComponentResolver
 			int orgIndex = markupStream.getCurrentIndex();
 			try
 			{
-				while (markupStream.hasMore())
+				while (markupStream.isCurrentIndexInsideTheStream())
 				{
 					markupStream.next();
 					if (markupStream.skipUntil(ComponentTag.class))
@@ -239,12 +277,6 @@ public class Enclosure extends WebMarkupContainer implements IComponentResolver
 	@Override
 	public Component resolve(MarkupContainer container, MarkupStream markupStream, ComponentTag tag)
 	{
-		// only resolved when auto, not when queued
-		// if (!isAuto())
-		// {
-		// return null;
-		// }
-
 		if (childId.equals(tag.getId()))
 		{
 			return childComponent;

@@ -18,8 +18,6 @@ import org.apache.wicket.behavior.Behavior;
 import org.apache.wicket.markup.ComponentTag;
 import org.apache.wicket.markup.html.form.FormComponent;
 import org.apache.wicket.model.IModel;
-import org.apache.wicket.model.IPropertyReflectionAwareModel;
-import org.apache.wicket.model.IWrapModel;
 import org.apache.wicket.model.PropertyModel;
 import org.apache.wicket.validation.IValidatable;
 import org.apache.wicket.validation.IValidator;
@@ -102,25 +100,7 @@ public class PropertyValidator<T> extends Behavior implements IValidator<T>
 		String baseMessage = "Could not resolve Bean Property from component: " + component
 				+ ". (Hints:) Possible causes are a typo in the PropertyExpression, a null reference or a model that does not work in combination with a "
 				+ IPropertyResolver.class.getSimpleName() + ".";
-
-		IModel<?> model = component.getModel();
-		// Code sadly copied over from DefaultPropertyResolver
-		while (true)
-		{
-			if (model == null)
-			{
-				break;
-			}
-			if (model instanceof IPropertyReflectionAwareModel)
-			{
-				break;
-			}
-			if (model instanceof IWrapModel<?>)
-			{
-				model = ((IWrapModel<?>)model).getWrappedModel();
-				continue;
-			}
-		}
+        IModel<?> model = ValidationModelResolver.resolvePropertyModelFrom(component);
 		if (model != null) {
 			baseMessage += " Model : " + model;
 		}

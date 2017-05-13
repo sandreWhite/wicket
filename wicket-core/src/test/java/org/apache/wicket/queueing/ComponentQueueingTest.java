@@ -25,11 +25,12 @@ import java.util.ArrayList;
 import org.apache.wicket.Component;
 import org.apache.wicket.MarkupContainer;
 import org.apache.wicket.WicketRuntimeException;
-import org.apache.wicket.WicketTestCase;
 import org.apache.wicket.markup.IMarkupResourceStreamProvider;
 import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.markup.html.WebPage;
+import org.apache.wicket.markup.html.basic.Label;
 import org.apache.wicket.markup.html.border.Border;
+import org.apache.wicket.markup.html.form.TextField;
 import org.apache.wicket.markup.html.internal.Enclosure;
 import org.apache.wicket.markup.html.link.Link;
 import org.apache.wicket.markup.html.list.ListItem;
@@ -37,12 +38,16 @@ import org.apache.wicket.markup.html.list.ListView;
 import org.apache.wicket.markup.html.panel.Fragment;
 import org.apache.wicket.markup.html.panel.Panel;
 import org.apache.wicket.model.Model;
+import org.apache.wicket.queueing.bodyisachild.BodyIsAChildPage;
+import org.apache.wicket.queueing.bodyisachild.LoginPanel;
 import org.apache.wicket.queueing.nestedborders.InnerBorder;
 import org.apache.wicket.queueing.nestedborders.OuterBorder;
 import org.apache.wicket.queueing.nestedpanels.InnerPanel;
 import org.apache.wicket.queueing.nestedpanels.OuterPanel;
 import org.apache.wicket.util.resource.IResourceStream;
 import org.apache.wicket.util.resource.StringResourceStream;
+import org.apache.wicket.util.tester.FormTester;
+import org.apache.wicket.util.tester.WicketTestCase;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -61,6 +66,26 @@ public class ComponentQueueingTest extends WicketTestCase
 		tester.startPage(p);
 	}
 
+	/**
+	 * https://issues.apache.org/jira/browse/WICKET-6361
+	 */
+	@Test
+	public void dequeueComponentsOnInitialization()
+	{
+		TestPage p = new TestPage();
+		p.setPageMarkup("<p wicket:id='a'><p wicket:id='b'><p wicket:id='c'></p></p></p>");
+		MarkupContainer a = new A(), b = new B(), c = new C();
+		
+		//components are queued before their nested container is added to the page.
+		//this caused a "Detach called on component...while it had a non-empty queue" before WICKET-6361 was fixed
+		b.queue(c);
+		a.add(b);
+		
+		p.add(a);
+
+		tester.startPage(p);
+	}
+	
 	/** {@code [a[b,c]] -> [a[b[c]]] } */
 	@Test
 	public void dequeue2()
@@ -567,16 +592,63 @@ public class ComponentQueueingTest extends WicketTestCase
 		// A is visible, enclosure renders
 
 		assertEquals(
-				"<div wicket:enclosure=\"a\" id=\"wicket__InlineEnclosure_01\"><div wicket:id=\"a\"></div><div wicket:id=\"b\"></div></div>",
+				"<div wicket:enclosure=\"a\" id=\"wicket__InlineEnclosure_20793898271\"><div wicket:id=\"a\"></div><div wicket:id=\"b\"></div></div>",
 				tester.getLastResponseAsString());
 
 		// A is not visible, inline enclosure render only itself (the placeholder tag)
 
 		a.setVisible(false);
 		tester.startPage(p);
-		assertEquals("<div id=\"wicket__InlineEnclosure_01\" style=\"display:none\"></div>", tester.getLastResponseAsString());
+		assertEquals("<div id=\"wicket__InlineEnclosure_20793898271\" style=\"display:none\"></div>", tester.getLastResponseAsString());
 	}
+	
+	/**
+	 * Test empty child attribute
+	 */
+	@Test
+	public void autos7()
+	{
+		TestPage p = new TestPage();
+		p.setPageMarkup("<wicket:enclosure child=''><div wicket:id='a'></div></wicket:enclosure>");
+		A a = new A();
+		
+		p.queue(a);
+		tester.startPage(p);
 
+		assertTrue(a.getParent() instanceof Enclosure);
+		
+
+		// A is visible, enclosure renders
+
+		assertEquals(
+			"<wicket:enclosure child=\"a\"><div wicket:id=\"a\"></div></wicket:enclosure>",
+			tester.getLastResponseAsString());
+
+		// A is not visible, enclosure does not render
+
+		a.setVisible(false);
+		tester.startPage(p);
+		assertEquals("", tester.getLastResponseAsString());
+	}
+	
+	/**
+	 * Test autocomponent inside not-queue region
+	 */
+	@Test
+	public void autosInsideNotQueueRegion()
+	{
+		TestPage p = new TestPage();
+		p.setPageMarkup("<div wicket:id='outerContainer'><wicket:enclosure><div wicket:id='a'></div></wicket:enclosure></div>");
+		Label a = new Label("a", "a");
+		WebMarkupContainer outer;
+		p.add(outer = new WebMarkupContainer("outerContainer"));
+		outer.queue(a);
+		
+		tester.startPage(p);
+
+		assertTrue(a.getParent() instanceof Enclosure);
+	}
+	
 	@Test
 	public void border1()
 	{
@@ -596,7 +668,22 @@ public class ComponentQueueingTest extends WicketTestCase
 
 		assertThat(p, hasPath(new Path(a, border, r, s, border.getBodyContainer(), b)));
 	}
+	
+	@Test
+	public void queueBorderBody() throws Exception
+	{
 
+		TestBorder border = new TestBorder("border");
+		border.setBorderMarkup("<wicket:border><wicket:body/></wicket:border>");
+
+		TestPage p = new TestPage();
+		p.setPageMarkup("<div wicket:id=\"border\"><span wicket:id=\"label\"></span></div>");
+		
+		p.add(border);
+		border.queue(new Label("label", "test"));
+		
+		tester.startPage(p);
+	}
 
 	@Test
 	public void border_nested()
@@ -672,6 +759,167 @@ public class ComponentQueueingTest extends WicketTestCase
 		page.queue(a, b);
 
 		assertThat(page, hasPath(new Path(a, b)));
+	}
+	
+	@Test
+	public void queueInsideHeader()
+	{
+		TestPage page = new TestPage();
+		page.setPageMarkup("<html>"
+			+"<head><title wicket:id='title'></title></head>"
+			+ "<body><div>"
+			+ "Hello!"
+			+ "</div></body>"
+			+ "</html>");
+		
+		page.queue(new Label("title"));
+		
+		tester.startPage(page);	
+		
+		tester.assertContains("title");
+	}
+	
+	@Test
+	public void queueInsideAutoLink()
+	{
+		TestPage page = new TestPage();
+		page.setPageMarkup("<wicket:link>"
+			+ "<a href='test.html'>"
+			+ "<wicket:container wicket:id='test'>test</wicket:container>"
+			+ "</a></wicket:link>");
+		
+		page.queue(new WebMarkupContainer("test"));
+		
+		tester.startPage(page);	
+	}
+	
+	@Test
+	public void queueInsideLabelComponent()
+	{
+		TestPage page = new TestPage();
+		page.setPageMarkup("<label wicket:for='input'>"
+				+ "label:"
+				+ "<input wicket:id='input'/>"
+				+ "</label>");
+		
+		page.queue(new TextField<>("input", Model.of("test")));
+		
+		tester.startPage(page);	
+	}
+
+	@Test
+	public void queueNestedEnclosure()
+	{
+		TestPage page = new TestPage();
+		page.setPageMarkup( "<div wicket:enclosure='outer'>" +
+			"<div wicket:id='outer'>" +
+			"	<div wicket:enclosure='middle'>" +
+			"		<div wicket:enclosure='inner'>" +
+			"			<div wicket:id='inner'>inner</div>" +
+			"		</div>" +
+			"		<div wicket:id='middle'>middle</div>" +
+			"	</div>" +
+			"	outer" +
+			"</div>" +
+			"</div>");
+		
+		WebMarkupContainer container = new WebMarkupContainer("outer");
+		container.add(new WebMarkupContainer("middle"));
+		container.add(new WebMarkupContainer("inner"));
+		
+		page.add(container);
+		
+		tester.startPage(page);	
+	}
+	
+	/**
+	 * https://issues.apache.org/jira/browse/WICKET-6088
+	 */
+	@Test
+	public void queueComponentInsideWcAndEnclosure()
+	{
+		TestPage page = new TestPage();
+		page.setPageMarkup(" <div wicket:id=\"container\">\n" +
+			"    <div wicket:enclosure=\"child\">\n" +
+			"      <p wicket:id=\"child\">1</p>\n" +
+			"      <a wicket:id=\"child2\">2</a>\n" +
+			"    </div>\n" +
+			"  </div>");
+		
+		WebMarkupContainer container = new WebMarkupContainer("container");
+
+		container.queue(new Label("child")
+		{
+			@Override
+			protected void onInitialize()
+			{
+				super.onInitialize();
+
+				setDefaultModel(Model.of("test"));
+			}
+		});
+		
+	    container.queue(new WebMarkupContainer("child2").setVisible(false));
+
+	    page.queue(container);
+		
+		tester.startPage(page);	
+	}
+	@Test
+	public void queueComponentInsideBorderAndEnclosure()
+	{
+		TestPage page = new TestPage();
+		page.setPageMarkup(" <div wicket:id=\"panel\"></div>");
+		
+		TestPanel panel = new TestPanel("panel");
+		panel.setPanelMarkup("<wicket:panel>\n"
+			+ "<div wicket:id=\"border\">\n" +
+			"    <div wicket:enclosure=\"child\">\n" +
+			"      <p wicket:id=\"child\">1</p>\n" +			
+			"    </div>\n" +
+			"  </div>\n" +
+			"</wicket:panel>");
+		
+		TestBorder border = new TestBorder("border");
+		border.setBorderMarkup("<wicket:border><wicket:body/></wicket:border>");
+		
+		panel.add(border);
+		page.add(panel);
+		border.add(new Label("child"));
+				
+		tester.startPage(page);	
+	}
+
+	/**
+	 * https://issues.apache.org/jira/browse/WICKET-6036
+	 */
+	@Test
+	public void nestedTags()
+	{
+		IncorrectCloseTagPanel p = new IncorrectCloseTagPanel("test");
+		tester.startComponentInPage(p);
+	}
+
+	/**
+	 * https://issues.apache.org/jira/browse/WICKET-6077
+	 */
+	@Test
+	public void bodyIsAChild() {
+		tester.startPage(BodyIsAChildPage.class);
+
+		tester.assertRenderedPage(BodyIsAChildPage.class);
+
+		String username = "USER";
+		String password = "PASSWD";
+
+		FormTester formTester = tester.newFormTester("wmc:login:loginForm");
+		formTester.setValue("usernameFormGroup:usernameFormGroup_body:username", username);
+		formTester.setValue("passwordFormGroup:passwordFormGroup_body:password", password);
+		formTester.submit();
+
+		LoginPanel loginPanel = (LoginPanel) tester.getComponentFromLastRenderedPage("wmc:login");
+		assertEquals(username, loginPanel.pojo.username);
+		assertEquals(password, loginPanel.pojo.password);
 	}
 
 	private static class A extends WebMarkupContainer

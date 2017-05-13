@@ -16,8 +16,9 @@
  */
 package org.apache.wicket.core.request.mapper;
 
-import org.apache.wicket.RequestListenerInterface;
-import org.apache.wicket.core.request.handler.ListenerInterfaceRequestHandler;
+import java.util.function.Supplier;
+
+import org.apache.wicket.core.request.handler.ListenerRequestHandler;
 import org.apache.wicket.request.IRequestHandler;
 import org.apache.wicket.request.Request;
 import org.apache.wicket.request.Url;
@@ -28,7 +29,6 @@ import org.apache.wicket.request.mapper.info.PageInfo;
 import org.apache.wicket.request.mapper.parameter.IPageParametersEncoder;
 import org.apache.wicket.request.mapper.parameter.PageParameters;
 import org.apache.wicket.request.mapper.parameter.PageParametersEncoder;
-import org.apache.wicket.util.IProvider;
 import org.apache.wicket.util.lang.Args;
 import org.apache.wicket.util.reference.ClassReference;
 import org.apache.wicket.util.string.Strings;
@@ -53,7 +53,7 @@ import org.apache.wicket.util.string.Strings;
  *  IPage Instance - Render Hybrid (RenderPageRequestHandler for mounted pages)
  *  /mount/point?2
  * 
- *  IPage Instance - Bookmarkable Listener (BookmarkableListenerInterfaceRequestHandler for mounted pages)
+ *  IPage Instance - Bookmarkable Listener (BookmarkableListenerRequestHandler for mounted pages)
  *  /mount/point?2-click-foo-bar-baz
  *  /mount/point?2-5.click.1-foo-bar-baz (1 is behavior index, 5 is render count)
  *  (these will redirect to hybrid if page is not stateless)
@@ -64,7 +64,7 @@ import org.apache.wicket.util.string.Strings;
 public class MountedMapper extends AbstractBookmarkableMapper
 {
 	/** bookmarkable page class. */
-	private final IProvider<Class<? extends IRequestablePage>> pageClassProvider;
+	private final Supplier<Class<? extends IRequestablePage>> pageClassProvider;
 
 	/**
 	 * Construct.
@@ -84,7 +84,7 @@ public class MountedMapper extends AbstractBookmarkableMapper
 	 * @param pageClassProvider
 	 */
 	public MountedMapper(String mountPath,
-		IProvider<Class<? extends IRequestablePage>> pageClassProvider)
+		Supplier<Class<? extends IRequestablePage>> pageClassProvider)
 	{
 		this(mountPath, pageClassProvider, new PageParametersEncoder());
 	}
@@ -110,7 +110,7 @@ public class MountedMapper extends AbstractBookmarkableMapper
 	 * @param pageParametersEncoder
 	 */
 	public MountedMapper(String mountPath,
-		IProvider<Class<? extends IRequestablePage>> pageClassProvider,
+		Supplier<Class<? extends IRequestablePage>> pageClassProvider,
 		IPageParametersEncoder pageParametersEncoder)
 	{
 		super(mountPath, pageParametersEncoder);
@@ -158,26 +158,22 @@ public class MountedMapper extends AbstractBookmarkableMapper
 	{
 		Url url = super.mapHandler(requestHandler);
 
-		if (url == null && requestHandler instanceof ListenerInterfaceRequestHandler &&
+		if (url == null && requestHandler instanceof ListenerRequestHandler &&
 			getRecreateMountedPagesAfterExpiry())
 		{
-			ListenerInterfaceRequestHandler handler = (ListenerInterfaceRequestHandler)requestHandler;
+			ListenerRequestHandler handler = (ListenerRequestHandler)requestHandler;
 			IRequestablePage page = handler.getPage();
 			if (checkPageInstance(page))
 			{
-				String componentPath = handler.getComponentPath();
-				RequestListenerInterface listenerInterface = handler.getListenerInterface();
-
 				Integer renderCount = null;
-				if (listenerInterface.isIncludeRenderCount())
+				if (handler.includeRenderCount())
 				{
 					renderCount = page.getRenderCount();
 				}
 
+				String componentPath = handler.getComponentPath();
 				PageInfo pageInfo = getPageInfo(handler);
-				ComponentInfo componentInfo = new ComponentInfo(renderCount,
-					requestListenerInterfaceToString(listenerInterface), componentPath,
-					handler.getBehaviorIndex());
+				ComponentInfo componentInfo = new ComponentInfo(renderCount, componentPath, handler.getBehaviorIndex());
 				PageComponentInfo pageComponentInfo = new PageComponentInfo(pageInfo, componentInfo);
 				PageParameters parameters = new PageParameters(page.getPageParameters());
 				UrlInfo urlInfo = new UrlInfo(pageComponentInfo, page.getClass(),

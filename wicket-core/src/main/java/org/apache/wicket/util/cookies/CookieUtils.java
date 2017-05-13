@@ -20,6 +20,7 @@ import javax.servlet.http.Cookie;
 
 import org.apache.wicket.markup.html.form.FormComponent;
 import org.apache.wicket.protocol.http.servlet.ServletWebRequest;
+import org.apache.wicket.request.Response;
 import org.apache.wicket.request.cycle.RequestCycle;
 import org.apache.wicket.request.http.WebRequest;
 import org.apache.wicket.request.http.WebResponse;
@@ -313,6 +314,7 @@ public class CookieUtils
 		cookie.setVersion(settings.getVersion());
 		cookie.setSecure(settings.getSecure());
 		cookie.setMaxAge(settings.getMaxAge());
+		cookie.setHttpOnly(settings.isHttpOnly());
 	}
 
 	/**
@@ -332,7 +334,13 @@ public class CookieUtils
 	 */
 	private WebResponse getWebResponse()
 	{
-		return (WebResponse)RequestCycle.get().getResponse();
+		RequestCycle cycle = RequestCycle.get();
+		Response response = cycle.getResponse();
+		if (!(response instanceof WebResponse))
+		{
+			response = cycle.getOriginalResponse();
+		}
+		return (WebResponse)response;
 	}
 
 	/**

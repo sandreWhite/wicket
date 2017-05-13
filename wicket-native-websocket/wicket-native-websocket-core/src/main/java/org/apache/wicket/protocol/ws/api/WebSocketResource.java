@@ -16,15 +16,19 @@
  */
 package org.apache.wicket.protocol.ws.api;
 
+import org.apache.wicket.protocol.ws.api.event.WebSocketAbortedPayload;
 import org.apache.wicket.protocol.ws.api.event.WebSocketBinaryPayload;
 import org.apache.wicket.protocol.ws.api.event.WebSocketClosedPayload;
 import org.apache.wicket.protocol.ws.api.event.WebSocketConnectedPayload;
+import org.apache.wicket.protocol.ws.api.event.WebSocketErrorPayload;
 import org.apache.wicket.protocol.ws.api.event.WebSocketPayload;
 import org.apache.wicket.protocol.ws.api.event.WebSocketPushPayload;
 import org.apache.wicket.protocol.ws.api.event.WebSocketTextPayload;
+import org.apache.wicket.protocol.ws.api.message.AbortedMessage;
 import org.apache.wicket.protocol.ws.api.message.BinaryMessage;
 import org.apache.wicket.protocol.ws.api.message.ClosedMessage;
 import org.apache.wicket.protocol.ws.api.message.ConnectedMessage;
+import org.apache.wicket.protocol.ws.api.message.ErrorMessage;
 import org.apache.wicket.protocol.ws.api.message.IWebSocketPushMessage;
 import org.apache.wicket.protocol.ws.api.message.TextMessage;
 import org.apache.wicket.request.resource.IResource;
@@ -62,6 +66,18 @@ public abstract class WebSocketResource implements IResource
 			ClosedMessage message = connectedPayload.getMessage();
 			onClose(message);
 		}
+		else if (payload instanceof WebSocketErrorPayload)
+		{
+			WebSocketErrorPayload errorPayload = (WebSocketErrorPayload) payload;
+			ErrorMessage message = errorPayload.getMessage();
+			onError(webSocketHandler, message);
+		}
+		else if (payload instanceof WebSocketAbortedPayload)
+		{
+			WebSocketAbortedPayload abortedPayload = (WebSocketAbortedPayload) payload;
+			AbortedMessage message = abortedPayload.getMessage();
+			onAbort(message);
+		}
 		else if (payload instanceof WebSocketPushPayload)
 		{
 			WebSocketPushPayload pushPayload = (WebSocketPushPayload) payload;
@@ -94,6 +110,16 @@ public abstract class WebSocketResource implements IResource
 	{
 	}
 
+    /**
+     * A callback method called when the server has aborted the connection
+     *
+     * @param message
+     *          the aborted message with the info about the server
+     */
+    protected void onAbort(AbortedMessage message)
+    {
+    }
+
 	/**
 	 * A callback method called when a WebSocket client has closed the connection
 	 * to the endpoint handled by this WebSocketBehavior
@@ -102,6 +128,18 @@ public abstract class WebSocketResource implements IResource
 	 *          the close message with the info about the client
 	 */
 	protected void onClose(ClosedMessage message)
+	{
+	}
+
+	/**
+	 * A callback method called when there is a communication error
+	 *
+	 * @param handler
+	 *          The request handler that can be used to send messages to the client
+	 * @param message
+	 *          The error message that that brings information about the communication error
+	 */
+	protected void onError(WebSocketRequestHandler handler, ErrorMessage message)
 	{
 	}
 

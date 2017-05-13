@@ -20,7 +20,7 @@
 	<parent>
 		<groupId>org.apache.wicket</groupId>
 		<artifactId>wicket-parent</artifactId>
-		<version>7.0.0-SNAPSHOT</version>
+		<version>8.0.0-SNAPSHOT</version>
 		<relativePath>../pom.xml</relativePath>
 	</parent>
 	<artifactId>wicket-examples</artifactId>
@@ -44,34 +44,31 @@
     			<version>1.0</version>
     		</dependency>
     		<dependency>
-    			<groupId>com.uwyn</groupId>
+    			<groupId>org.codelibs</groupId>
     			<artifactId>jhighlight</artifactId>
-    			<version>1.0</version>
+    			<version>1.0.3</version>
     			<exclusions>
     				<exclusion>
     					<groupId>javax.servlet</groupId>
     					<artifactId>servlet-api</artifactId>
     				</exclusion>
     			</exclusions>
-    		</dependency>
-    		<dependency>
-    			<groupId>org.eclipse.jetty.aggregate</groupId>
-    			<artifactId>jetty-all-server</artifactId>
-                <version>${jetty.version}</version>
-    			<exclusions>
-    				<exclusion>
-    					<!-- exclude because the same jar comes from JBoss Weld and the following error occurs:
-    					 class "javax.annotation.ManagedBean"'s signer information does not match signer
-    					 information of other classes in the same package
-    					 -->
-    					<groupId>org.eclipse.jetty.orbit</groupId>
-    					<artifactId>javax.annotation</artifactId>
-    				</exclusion>
-    			</exclusions>
-    		</dependency>
-        </dependencies>
-    </dependencyManagement>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 	<dependencies>
+		<dependency>
+			<groupId>org.eclipse.jetty</groupId>
+			<artifactId>jetty-webapp</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.eclipse.jetty</groupId>
+			<artifactId>jetty-jmx</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.eclipse.jetty.websocket</groupId>
+			<artifactId>javax-websocket-server-impl</artifactId>
+		</dependency>
 		<dependency>
 			<groupId>javax.el</groupId>
 			<artifactId>javax.el-api</artifactId>
@@ -93,8 +90,9 @@
 			<artifactId>cage</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.uwyn</groupId>
-			<artifactId>jhighlight</artifactId>
+			<groupId>javax.validation</groupId>
+			<artifactId>validation-api</artifactId>
+			<scope>compile</scope>
 		</dependency>
 		<dependency>
 			<groupId>log4j</groupId>
@@ -144,19 +142,19 @@
 			<groupId>org.apache.wicket</groupId>
 			<artifactId>wicket-velocity</artifactId>
 		</dependency>
-		<dependency>
-			<groupId>org.apache.wicket.experimental.wicket7</groupId>
-			<artifactId>wicket-atmosphere</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.eclipse.jetty.aggregate</groupId>
-			<artifactId>jetty-all-server</artifactId>
-		</dependency>
         <dependency>
-            <groupId>org.hibernate</groupId>
-            <artifactId>hibernate-validator</artifactId>
-            <scope>compile</scope>
+            <groupId>org.apache.wicket</groupId>
+            <artifactId>wicket-native-websocket-javax</artifactId>
         </dependency>
+		<dependency>
+			<groupId>org.codelibs</groupId>
+			<artifactId>jhighlight</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.hibernate</groupId>
+			<artifactId>hibernate-validator</artifactId>
+			<scope>compile</scope>
+		</dependency>
 		<dependency>
 			<groupId>org.jboss.weld.servlet</groupId>
 			<artifactId>weld-servlet</artifactId>
@@ -199,6 +197,7 @@
 					<include>**/*.txt</include>
 					<include>**/*.xml</include>
 					<include>**/*.properties</include>
+					<include>**/*.mp4</include>
 				</includes>
 			</resource>
 			<resource>
@@ -216,6 +215,7 @@
 					<include>**/*.properties</include>
 					<include>**/*.vm</include>
 					<include>**/*.tmpl</include>
+					<include>**/*.mp4</include>
 				</includes>
 			</resource>
 		</resources>
@@ -229,7 +229,7 @@
 				<artifactId>maven-javadoc-plugin</artifactId>
 			</plugin>
 			<plugin>
-				<groupId>org.mortbay.jetty</groupId>
+				<groupId>org.eclipse.jetty</groupId>
 				<artifactId>jetty-maven-plugin</artifactId>
 			</plugin>
 		</plugins>

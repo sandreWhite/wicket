@@ -17,7 +17,7 @@
 package org.apache.wicket.settings;
 
 /**
- * Settings interface for various debug settings
+ * Settings class for various debug settings
  * <p>
  * <i>componentUseCheck </i> (defaults to true in development mode) - causes the framework to do a
  * check after rendering each page to ensure that each component was used in rendering the markup.
@@ -55,8 +55,6 @@ public class DebugSettings
 	 * Whether the container's class name should be printed to response (in a html comment).
 	 */
 	private boolean outputMarkupContainerClassName = false;
-
-	private boolean outputComponentPath = false;
 
 	private String componentPathAttributeName = null;
 
@@ -179,33 +177,6 @@ public class DebugSettings
 	public DebugSettings setOutputMarkupContainerClassName(boolean enable)
 	{
 		outputMarkupContainerClassName = enable;
-		return this;
-	}
-
-	/**
-	 * @see #setOutputComponentPath(boolean)
-	 * @return <code>true</code> if output component path feature is enabled, <code>false</code>
-	 *         otherwise
-	 * @deprecated Use #getComponentPathAttributeName() instead
-	 */
-	@Deprecated
-	public boolean isOutputComponentPath()
-	{
-		return outputComponentPath;
-	}
-
-	/**
-	 * If set to <code>true</code> wicket will output component path in a <code>wicketpath</code>
-	 * attribute of the component tag. This can be useful for debugging and automating tests.
-	 *
-	 * @param outputComponentPath
-	 * @return {@code this} object for chaining
-	 * @deprecated Use #setComponentPathAttributeName() with a non-empty value
-	 */
-	@Deprecated
-	public DebugSettings setOutputComponentPath(boolean outputComponentPath)
-	{
-		this.outputComponentPath = outputComponentPath;
 		return this;
 	}
 

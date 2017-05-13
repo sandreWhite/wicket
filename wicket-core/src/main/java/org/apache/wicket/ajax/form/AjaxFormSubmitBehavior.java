@@ -25,6 +25,8 @@ import org.apache.wicket.markup.html.form.Button;
 import org.apache.wicket.markup.html.form.Form;
 import org.apache.wicket.markup.html.form.IFormSubmitter;
 import org.apache.wicket.markup.html.form.IFormSubmittingComponent;
+import org.apache.wicket.util.lang.Args;
+import org.danekja.java.util.function.serializable.SerializableConsumer;
 
 /**
  * Ajax event behavior that submits a form via ajax when the event it is attached to, is invoked.
@@ -84,7 +86,6 @@ public abstract class AjaxFormSubmitBehavior extends AjaxEventBehavior
 	}
 
 	/**
-	 * 
 	 * @return Form that will be submitted by this behavior
 	 */
 	public final Form<?> getForm()
@@ -102,6 +103,21 @@ public abstract class AjaxFormSubmitBehavior extends AjaxEventBehavior
 			}
 		}
 		return __form;
+	}
+
+	/**
+	 * @return the bound component if it implements {@link org.apache.wicket.markup.html.form.IFormSubmittingComponent},
+	 * otherwise - {@code null}
+	 */
+	private IFormSubmittingComponent getFormSubmittingComponent()
+	{
+		IFormSubmittingComponent submittingComponent = null;
+		Component component = getComponent();
+		if (component instanceof IFormSubmittingComponent)
+		{
+			submittingComponent = ((IFormSubmittingComponent) component);
+		}
+		return submittingComponent;
 	}
 
 	/**
@@ -143,56 +159,78 @@ public abstract class AjaxFormSubmitBehavior extends AjaxEventBehavior
 			attributes.setMethod(Method.POST);
 		}
 
-		if (getComponent() instanceof IFormSubmittingComponent)
+		IFormSubmittingComponent submittingComponent = getFormSubmittingComponent();
+		if (submittingComponent != null)
 		{
-			String submittingComponentName = ((IFormSubmittingComponent)getComponent()).getInputName();
+			String submittingComponentName = submittingComponent.getInputName();
 			attributes.setSubmittingComponentName(submittingComponentName);
 		}
 	}
 
-	/**
-	 * @see org.apache.wicket.ajax.AjaxEventBehavior#onEvent(org.apache.wicket.ajax.AjaxRequestTarget)
-	 */
 	@Override
 	protected void onEvent(final AjaxRequestTarget target)
 	{
-		getForm().getRootForm().onFormSubmitted(new IFormSubmitter()
+		getForm().getRootForm().onFormSubmitted(new AjaxFormSubmitBehavior.AjaxFormSubmitter(this, target));
+	}
+
+	/**
+	 * A publicly reachable class that allows to introspect the submitter, e.g. to
+	 * check what is the input name of the submitting component if there is such.
+	 */
+	public static class AjaxFormSubmitter implements IFormSubmitter
+	{
+		private final AjaxFormSubmitBehavior submitBehavior;
+		private final AjaxRequestTarget target;
+
+		private AjaxFormSubmitter(AjaxFormSubmitBehavior submitBehavior, AjaxRequestTarget target)
 		{
-			@Override
-			public Form<?> getForm()
-			{
-				return AjaxFormSubmitBehavior.this.getForm();
-			}
+			this.submitBehavior = submitBehavior;
+			this.target = target;
+		}
 
-			@Override
-			public boolean getDefaultFormProcessing()
-			{
-				return AjaxFormSubmitBehavior.this.getDefaultProcessing();
-			}
+		@Override
+		public Form<?> getForm()
+		{
+			return submitBehavior.getForm();
+		}
 
-			@Override
-			public void onError()
-			{
-				AjaxFormSubmitBehavior.this.onError(target);
-			}
+		/**
+		 * @return the {@link IFormSubmittingComponent} 
+		 */
+		public IFormSubmittingComponent getFormSubmittingComponent()
+		{
+			return submitBehavior.getFormSubmittingComponent();
+		}
 
-			@Override
-			public void onSubmit()
-			{
-				AjaxFormSubmitBehavior.this.onSubmit(target);
-			}
+		@Override
+		public boolean getDefaultFormProcessing()
+		{
+			return submitBehavior.getDefaultProcessing();
+		}
 
-			@Override
-			public void onAfterSubmit()
-			{
-				AjaxFormSubmitBehavior.this.onAfterSubmit(target);
-			}
-		});
+		@Override
+		public void onError()
+		{
+			submitBehavior.onError(target);
+		}
+
+		@Override
+		public void onSubmit()
+		{
+			submitBehavior.onSubmit(target);
+		}
+
+		@Override
+		public void onAfterSubmit()
+		{
+			submitBehavior.onAfterSubmit(target);
+		}
 	}
 
 	/**
 	 * Override this method to provide special submit handling in a multi-button form. This method
 	 * will be called <em>after</em> the form's onSubmit method.
+	 * @param target the {@link AjaxRequestTarget}
 	 */
 	protected void onAfterSubmit(AjaxRequestTarget target)
 	{
@@ -201,6 +239,7 @@ public abstract class AjaxFormSubmitBehavior extends AjaxEventBehavior
 	/**
 	 * Override this method to provide special submit handling in a multi-button form. This method
 	 * will be called <em>before</em> the form's onSubmit method.
+	 * @param target the {@link AjaxRequestTarget}
 	 */
 	protected void onSubmit(AjaxRequestTarget target)
 	{
@@ -233,5 +272,31 @@ public abstract class AjaxFormSubmitBehavior extends AjaxEventBehavior
 	public void setDefaultProcessing(boolean defaultProcessing)
 	{
 		this.defaultProcessing = defaultProcessing;
+	}
+
+	/**
+	 * Creates an {@link AjaxFormSubmitBehavior} based on lambda expressions
+	 * 
+	 * @param eventName
+	 *            the event name
+	 * @param onSubmit
+	 *            the {@code SerializableConsumer} which accepts the {@link AjaxRequestTarget}
+	 * @return the {@link AjaxFormSubmitBehavior}
+	 */
+	public static AjaxFormSubmitBehavior onSubmit(String eventName,
+		SerializableConsumer<AjaxRequestTarget> onSubmit)
+	{
+		Args.notNull(onSubmit, "onSubmit");
+
+		return new AjaxFormSubmitBehavior(eventName)
+		{
+			private static final long serialVersionUID = 1L;
+
+			@Override
+			protected void onSubmit(AjaxRequestTarget target)
+			{
+				onSubmit.accept(target);
+			}
+		};
 	}
 }

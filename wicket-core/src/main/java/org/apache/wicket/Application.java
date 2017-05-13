@@ -16,23 +16,14 @@
  */
 package org.apache.wicket;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.JarURLConnection;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.net.URLConnection;
 import java.util.Collections;
-import java.util.Enumeration;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.ServiceLoader;
 import java.util.Set;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
-import java.util.jar.JarInputStream;
+import java.util.function.Supplier;
 
 import org.apache.wicket.application.ComponentInitializationListenerCollection;
 import org.apache.wicket.application.ComponentInstantiationListenerCollection;
@@ -60,9 +51,7 @@ import org.apache.wicket.markup.parser.filter.InlineEnclosureHandler;
 import org.apache.wicket.markup.parser.filter.RelativePathPrefixHandler;
 import org.apache.wicket.markup.parser.filter.WicketLinkTagHandler;
 import org.apache.wicket.markup.parser.filter.WicketMessageTagHandler;
-import org.apache.wicket.markup.resolver.FragmentResolver;
 import org.apache.wicket.markup.resolver.HtmlHeaderResolver;
-import org.apache.wicket.markup.resolver.MarkupInheritanceResolver;
 import org.apache.wicket.markup.resolver.WicketContainerResolver;
 import org.apache.wicket.markup.resolver.WicketMessageResolver;
 import org.apache.wicket.page.DefaultPageManagerContext;
@@ -80,12 +69,10 @@ import org.apache.wicket.request.IRequestHandler;
 import org.apache.wicket.request.IRequestMapper;
 import org.apache.wicket.request.Request;
 import org.apache.wicket.request.Response;
-import org.apache.wicket.request.cycle.AbstractRequestCycleListener;
 import org.apache.wicket.request.cycle.IRequestCycleListener;
 import org.apache.wicket.request.cycle.RequestCycle;
 import org.apache.wicket.request.cycle.RequestCycleContext;
 import org.apache.wicket.request.cycle.RequestCycleListenerCollection;
-import org.apache.wicket.request.mapper.CompoundRequestMapper;
 import org.apache.wicket.request.mapper.ICompoundRequestMapper;
 import org.apache.wicket.request.resource.ResourceReferenceRegistry;
 import org.apache.wicket.response.filter.EmptySrcAttributeCheckFilter;
@@ -104,10 +91,7 @@ import org.apache.wicket.settings.RequestLoggerSettings;
 import org.apache.wicket.settings.ResourceSettings;
 import org.apache.wicket.settings.SecuritySettings;
 import org.apache.wicket.settings.StoreSettings;
-import org.apache.wicket.util.IProvider;
 import org.apache.wicket.util.file.File;
-import org.apache.wicket.util.file.Folder;
-import org.apache.wicket.util.io.Streams;
 import org.apache.wicket.util.lang.Args;
 import org.apache.wicket.util.lang.Generics;
 import org.apache.wicket.util.time.Duration;
@@ -170,6 +154,11 @@ public abstract class Application implements UnboundListener, IEventSink
 
 	private static final String PROPERTIES_FILE_EXTENSION = ".properties";
 
+	/**
+	 * The path to look for Wicket specific properties file(s)
+	 */
+	private static final String META_INF_WICKET_PATH = File.separatorChar+ "META-INF" + File.separatorChar + "wicket" + File.separatorChar;
+
 	/** root mapper */
 	private IRequestMapper rootRequestMapper;
 
@@ -198,10 +187,10 @@ public abstract class Application implements UnboundListener, IEventSink
 	private IRequestCycleProvider requestCycleProvider;
 
 	/** exception mapper provider */
-	private IProvider<IExceptionMapper> exceptionMapperProvider;
+	private Supplier<IExceptionMapper> exceptionMapperProvider;
 
 	/** session store provider */
-	private IProvider<ISessionStore> sessionStoreProvider;
+	private Supplier<ISessionStore> sessionStoreProvider;
 
 	/**
 	 * The decorator this application uses to decorate any header responses created by Wicket
@@ -480,142 +469,6 @@ public abstract class Application implements UnboundListener, IEventSink
 	}
 
 	/**
-	 * Finds all /META-INF/wicket/**.properties files and registers any {@link org.apache.wicket.IInitializer}s
-	 * found in them.
-	 *
-	 * @throws IOException When there is a problem reading the content of the properties file
-	 * @throws URISyntaxException When the url to the properties file cannot be translated to a file system path
-	 */
-	private void collectWicketProperties() throws IOException, URISyntaxException
-	{
-		Iterator<URL> wicketResources = getApplicationSettings().getClassResolver().getResources("META-INF/wicket/");
-		while (wicketResources.hasNext())
-		{
-			URL metaInfWicket = wicketResources.next();
-			String protocol = metaInfWicket.getProtocol();
-
-			if ("jar".equals(protocol))
-			{
-				JarURLConnection jarURLConnection = (JarURLConnection) metaInfWicket.openConnection();
-				JarFile jarFile = jarURLConnection.getJarFile();
-				Enumeration<JarEntry> jarEntries = jarFile.entries();
-				while (jarEntries.hasMoreElements())
-				{
-					JarEntry jarEntry = jarEntries.nextElement();
-					String entryName = jarEntry.getName();
-					if (entryName.startsWith("META-INF/wicket/") && entryName.endsWith(".properties"))
-					{
-						try (InputStream jarEntryStream = jarFile.getInputStream(jarEntry))
-						{
-							Properties properties = new Properties();
-							properties.load(jarEntryStream);
-							load(properties);
-							break; // atm there is no need to have more than one .properties file
-						}
-					}
-				}
-			}
-			else if ("vfs".equals(protocol))
-			{ // support for JBoss 6+
-				URLConnection connection = metaInfWicket.openConnection();
-				JarInputStream inputStream = (JarInputStream) connection.getInputStream();
-
-				int offset = 0;
-				JarEntry jarEntry;
-				while ((jarEntry = inputStream.getNextJarEntry()) != null) {
-					String jarEntryName = jarEntry.getName();
-					int size = (int) jarEntry.getSize();
-					if (jarEntryName.endsWith(PROPERTIES_FILE_EXTENSION))
-					{
-						byte[] buf = new byte[size];
-						int read = inputStream.read(buf, offset, size);
-						if (read == size)
-						{
-							Properties properties = new Properties();
-							properties.load(new ByteArrayInputStream(buf));
-							load(properties);
-						}
-						else
-						{
-							log.warn("Expected to read '{}' bytes from '{}' but actually read '{}'",
-									size, jarEntryName, read);
-						}
-					}
-					offset += size;
-				}
-			}
-			else if ("file".equals(protocol))
-			{
-				Folder metaInfWicketFolder = new Folder(metaInfWicket.toURI());
-				File[] files = metaInfWicketFolder.getFiles(new Folder.FileFilter()
-				{
-					@Override
-					public boolean accept(File file)
-					{
-						String fileName = file.getAbsolutePath();
-						return fileName.contains("/META-INF/wicket/") && fileName.endsWith(PROPERTIES_FILE_EXTENSION);
-					}
-				});
-				for (File wicketPropertiesFile : files)
-				{
-					try (InputStream stream = wicketPropertiesFile.inputStream())
-					{
-						Properties properties = new Properties();
-						properties.load(stream);
-						load(properties);
-					}
-				}
-			}
-			else
-			{
-				log.error("Cannot load '{}'. The protocol '{}' is not supported!", metaInfWicket, protocol);
-			}
-		}
-	}
-
-	/**
-	 * THIS METHOD IS NOT PART OF THE WICKET PUBLIC API. DO NOT CALL.
-	 * 
-	 * Initializes wicket components.
-	 * @deprecated This method will become 'private' in Wicket 8.x. And the support for /wicket.properties
-	 * will be dropped
-	 */
-	@Deprecated
-	public final void initializeComponents()
-	{
-		// Load any wicket properties files we can find
-		try
-		{
-			collectWicketProperties();
-
-			// Load properties files used by all libraries
-
-			final Iterator<URL> resources = getApplicationSettings().getClassResolver()
-				.getResources("wicket.properties");
-			while (resources.hasNext())
-			{
-				final URL url = resources.next();
-				log.warn("Found '{}'. /wicket.properties location is deprecated. Please move the file to" +
-						" /META-INF/wicket/ folder and give it a name that matches your packages' name," +
-						" e.g. com.example.myapp.properties", url);
-				final Properties properties = new Properties();
-				try (InputStream in = Streams.readNonCaching(url))
-				{
-					properties.load(in);
-					load(properties);
-				}
-			}
-		}
-		catch (IOException | URISyntaxException e)
-		{
-			throw new WicketRuntimeException("Unable to load initializers file", e);
-		}
-
-		// now call any initializers we read
-		initInitializers();
-	}
-
-	/**
 	 * THIS METHOD IS NOT PART OF THE WICKET PUBLIC API. DO NOT CALL.
 	 * 
 	 * @param target
@@ -703,8 +556,15 @@ public abstract class Application implements UnboundListener, IEventSink
 	{
 		for (IInitializer initializer : initializers)
 		{
-			log.info("[" + getName() + "] init: " + initializer);
+			log.info("[{}] init: {}", getName(), initializer);
 			initializer.init(this);
+		}
+
+		final ServiceLoader<IInitializer> serviceLoaderInitializers = ServiceLoader.load(IInitializer.class);
+		for (IInitializer serviceLoaderInitializer : serviceLoaderInitializers) {
+			log.info("[{}] init: {}", getName(), serviceLoaderInitializer);
+			serviceLoaderInitializer.init(this);
+			initializers.add(serviceLoaderInitializer);
 		}
 	}
 
@@ -778,11 +638,9 @@ public abstract class Application implements UnboundListener, IEventSink
 		PageSettings pageSettings = getPageSettings();
 
 		// Install default component resolvers
-		pageSettings.addComponentResolver(new MarkupInheritanceResolver());
 		pageSettings.addComponentResolver(new HtmlHeaderResolver());
 		pageSettings.addComponentResolver(new WicketLinkTagHandler());
 		pageSettings.addComponentResolver(new WicketMessageResolver());
-		pageSettings.addComponentResolver(new FragmentResolver());
 		pageSettings.addComponentResolver(new RelativePathPrefixHandler());
 		pageSettings.addComponentResolver(new EnclosureHandler());
 		pageSettings.addComponentResolver(new InlineEnclosureHandler());
@@ -810,17 +668,22 @@ public abstract class Application implements UnboundListener, IEventSink
 
 		pageFactory = newPageFactory();
 
-		requestCycleProvider = new DefaultRequestCycleProvider();
-		exceptionMapperProvider = new DefaultExceptionMapperProvider();
+		requestCycleProvider = (context) -> new RequestCycle(context);
+		exceptionMapperProvider = () -> new DefaultExceptionMapper();
 
 		// add a request cycle listener that logs each request for the requestlogger.
 		getRequestCycleListeners().add(new RequestLoggerRequestCycleListener());
 	}
 
 	/**
-	 * @return the exception mapper provider
+	 * Returns a supplier of {@link IExceptionMapper} that will be used to
+	 * handle exceptions which were not handled by any
+	 * {@link IRequestCycleListener#onException(RequestCycle, Exception) request cycle listener}.
+	 *
+	 * @return the exception mapper supplier
+	 * @see IRequestCycleListener#onException(RequestCycle, Exception)
 	 */
-	public IProvider<IExceptionMapper> getExceptionMapperProvider()
+	public Supplier<IExceptionMapper> getExceptionMapperProvider()
 	{
 		return exceptionMapperProvider;
 	}
@@ -829,7 +692,7 @@ public abstract class Application implements UnboundListener, IEventSink
 	 * 
 	 * @return Session state provider
 	 */
-	public final IProvider<ISessionStore> getSessionStoreProvider()
+	public final Supplier<ISessionStore> getSessionStoreProvider()
 	{
 		return sessionStoreProvider;
 	}
@@ -838,9 +701,10 @@ public abstract class Application implements UnboundListener, IEventSink
 	 * 
 	 * @param sessionStoreProvider
 	 */
-	public final Application setSessionStoreProvider(final IProvider<ISessionStore> sessionStoreProvider)
+	public final Application setSessionStoreProvider(final Supplier<ISessionStore> sessionStoreProvider)
 	{
-		this.sessionStoreProvider = sessionStoreProvider;
+		this.sessionStoreProvider = Args.notNull(sessionStoreProvider, "sessionStoreProvider");
+		this.sessionStore = null;
 		return this;
 	}
 
@@ -876,7 +740,7 @@ public abstract class Application implements UnboundListener, IEventSink
 		IRequestMapper root = getRootRequestMapper();
 		if (!(root instanceof ICompoundRequestMapper))
 		{
-			root = new CompoundRequestMapper().add(root);
+			root = new SystemMapper(this).add(root);
 			setRootRequestMapper(root);
 		}
 		return (ICompoundRequestMapper)root;
@@ -911,7 +775,7 @@ public abstract class Application implements UnboundListener, IEventSink
 			throw new IllegalStateException("setName must be called before initApplication");
 		}
 		internalInit();
-		initializeComponents();
+		initInitializers();
 		init();
 		applicationListeners.onAfterInitialized(this);
 
@@ -1481,7 +1345,7 @@ public abstract class Application implements UnboundListener, IEventSink
 	 * 
 	 * @param provider
 	 */
-	public synchronized final Application setPageManagerProvider(final IPageManagerProvider provider)
+	public final Application setPageManagerProvider(final IPageManagerProvider provider)
 	{
 		pageManagerProvider = provider;
 		return this;
@@ -1505,7 +1369,7 @@ public abstract class Application implements UnboundListener, IEventSink
 			{
 				if (pageManager == null)
 				{
-					pageManager = pageManagerProvider.get(getPageManagerContext());
+					pageManager = pageManagerProvider.apply(getPageManagerContext());
 				}
 			}
 		}
@@ -1707,27 +1571,6 @@ public abstract class Application implements UnboundListener, IEventSink
 		return this;
 	}
 
-	private static class DefaultExceptionMapperProvider implements IProvider<IExceptionMapper>
-	{
-		@Override
-		public IExceptionMapper get()
-		{
-			return new DefaultExceptionMapper();
-		}
-	}
-
-	/**
-	 *
-	 */
-	private static class DefaultRequestCycleProvider implements IRequestCycleProvider
-	{
-		@Override
-		public RequestCycle get(final RequestCycleContext context)
-		{
-			return new RequestCycle(context);
-		}
-	}
-
 	/**
 	 * 
 	 * @param request
@@ -1739,9 +1582,9 @@ public abstract class Application implements UnboundListener, IEventSink
 		RequestCycleContext context = new RequestCycleContext(request, response,
 			getRootRequestMapper(), getExceptionMapperProvider().get());
 
-		RequestCycle requestCycle = getRequestCycleProvider().get(context);
+		RequestCycle requestCycle = getRequestCycleProvider().apply(context);
 		requestCycle.getListeners().add(requestCycleListeners);
-		requestCycle.getListeners().add(new AbstractRequestCycleListener()
+		requestCycle.getListeners().add(new IRequestCycleListener()
 		{
 			@Override
 			public void onDetach(final RequestCycle requestCycle)

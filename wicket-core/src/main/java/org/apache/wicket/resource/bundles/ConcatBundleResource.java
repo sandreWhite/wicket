@@ -137,7 +137,7 @@ public class ConcatBundleResource extends AbstractResource implements IStaticCac
 		for (IReferenceHeaderItem curItem : providedResources)
 		{
 			IResourceStream stream = ((IStaticCacheableResource)curItem.getReference()
-				.getResource()).getCacheableResourceStream();
+				.getResource()).getResourceStream();
 			if (stream == null)
 			{
 				reportError(curItem.getReference(), "Cannot get resource stream for ");
@@ -230,7 +230,7 @@ public class ConcatBundleResource extends AbstractResource implements IStaticCac
 
 	/**
 	 * If a bundle resource is missing then throws a {@link MissingResourceException} if
-	 * {@link org.apache.wicket.settings.IResourceSettings#getThrowExceptionOnMissingResource()}
+	 * {@link org.apache.wicket.settings.ResourceSettings#getThrowExceptionOnMissingResource()}
 	 * says so, or logs a warning message if the logging level allows
 	 * @param reference
 	 *              The resource reference to the missing resource
@@ -254,7 +254,7 @@ public class ConcatBundleResource extends AbstractResource implements IStaticCac
 	}
 
 	@Override
-	public IResourceStream getCacheableResourceStream()
+	public IResourceStream getResourceStream()
 	{
 		List<IResourceStream> resources = collectResourceStreams();
 
@@ -329,7 +329,7 @@ public class ConcatBundleResource extends AbstractResource implements IStaticCac
 	}
 
 	/**
-	 * @return the result of {@link org.apache.wicket.settings.IResourceSettings#getThrowExceptionOnMissingResource()}
+	 * @return the result of {@link org.apache.wicket.settings.ResourceSettings#getThrowExceptionOnMissingResource()}
 	 */
 	protected boolean getThrowExceptionOnMissingResource()
 	{

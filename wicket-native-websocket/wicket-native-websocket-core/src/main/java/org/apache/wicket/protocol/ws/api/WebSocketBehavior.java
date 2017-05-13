@@ -18,15 +18,19 @@ package org.apache.wicket.protocol.ws.api;
 
 import org.apache.wicket.Component;
 import org.apache.wicket.event.IEvent;
+import org.apache.wicket.protocol.ws.api.event.WebSocketAbortedPayload;
 import org.apache.wicket.protocol.ws.api.event.WebSocketBinaryPayload;
 import org.apache.wicket.protocol.ws.api.event.WebSocketClosedPayload;
 import org.apache.wicket.protocol.ws.api.event.WebSocketConnectedPayload;
+import org.apache.wicket.protocol.ws.api.event.WebSocketErrorPayload;
 import org.apache.wicket.protocol.ws.api.event.WebSocketPayload;
 import org.apache.wicket.protocol.ws.api.event.WebSocketPushPayload;
 import org.apache.wicket.protocol.ws.api.event.WebSocketTextPayload;
+import org.apache.wicket.protocol.ws.api.message.AbortedMessage;
 import org.apache.wicket.protocol.ws.api.message.BinaryMessage;
 import org.apache.wicket.protocol.ws.api.message.ClosedMessage;
 import org.apache.wicket.protocol.ws.api.message.ConnectedMessage;
+import org.apache.wicket.protocol.ws.api.message.ErrorMessage;
 import org.apache.wicket.protocol.ws.api.message.IWebSocketPushMessage;
 import org.apache.wicket.protocol.ws.api.message.TextMessage;
 
@@ -77,6 +81,18 @@ public abstract class WebSocketBehavior extends BaseWebSocketBehavior
 				ClosedMessage message = closedPayload.getMessage();
 				onClose(message);
 			}
+			else if (wsPayload instanceof WebSocketErrorPayload)
+			{
+				WebSocketErrorPayload errorPayload = (WebSocketErrorPayload) wsPayload;
+				ErrorMessage message = errorPayload.getMessage();
+				onError(webSocketHandler, message);
+			}
+			else if (wsPayload instanceof WebSocketAbortedPayload)
+			{
+				WebSocketAbortedPayload abortedPayload = (WebSocketAbortedPayload) wsPayload;
+				AbortedMessage message = abortedPayload.getMessage();
+				onAbort(message);
+			}
 			else if (wsPayload instanceof WebSocketPushPayload)
 			{
 				WebSocketPushPayload pushPayload = (WebSocketPushPayload) wsPayload;
@@ -119,6 +135,27 @@ public abstract class WebSocketBehavior extends BaseWebSocketBehavior
 	 */
 	protected void onClose(ClosedMessage message)
 	{
+	}
+
+	/**
+	 * A callback method called when there is a communication error
+	 *
+	 * @param handler
+	 *          The request handler that can be used to send messages to the client
+	 * @param message
+	 *          The error message that that brings information about the communication error
+	 */
+	protected void onError(WebSocketRequestHandler handler, ErrorMessage message)
+	{
+	}
+
+	/**
+	 * A callback method called when the server has aborted the connection
+	 *
+	 * @param message
+	 *          the aborted message with the info about the client
+	 */
+	protected void onAbort(AbortedMessage message) {
 	}
 
 	/**

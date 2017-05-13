@@ -18,14 +18,20 @@ package org.apache.wicket.markup.parser.filter;
 
 import java.text.ParseException;
 
+import org.apache.wicket.Component;
+import org.apache.wicket.MarkupContainer;
 import org.apache.wicket.markup.ComponentTag;
+import org.apache.wicket.markup.ComponentTag.IAutoComponentFactory;
 import org.apache.wicket.markup.Markup;
 import org.apache.wicket.markup.MarkupElement;
 import org.apache.wicket.markup.MarkupException;
 import org.apache.wicket.markup.MarkupStream;
+import org.apache.wicket.markup.html.internal.HtmlHeaderContainer;
+import org.apache.wicket.markup.html.internal.HtmlHeaderItemsContainer;
 import org.apache.wicket.markup.parser.AbstractMarkupFilter;
 import org.apache.wicket.markup.parser.XmlTag.TagType;
 import org.apache.wicket.markup.resolver.HtmlHeaderResolver;
+import org.apache.wicket.util.tester.BaseWicketTester;
 
 
 /**
@@ -55,12 +61,15 @@ public final class HtmlHeaderSectionHandler extends AbstractMarkupFilter
 	/** The automatically assigned wicket:id to &gt;head&lt; tag */
 	public static final String HEADER_ID = "_header_";
 
+	public static final String HEADER_ID_ITEM = "_header_item_";
+
 	/** True if &lt;head&gt; has been found already */
 	private boolean foundHead = false;
 
 	/** True if &lt;/head&gt; has been found already */
 	private boolean foundClosingHead = false;
 
+	/** True if &lt;/wicket:header-items&gt; has been found already */
 	private boolean foundHeaderItemsTag = false;
 
 	/** True if all the rest of the markup file can be ignored */
@@ -69,6 +78,24 @@ public final class HtmlHeaderSectionHandler extends AbstractMarkupFilter
 	/** The Markup available so far for the resource */
 	private final Markup markup;
 
+	private static final IAutoComponentFactory HTML_HEADER_FACTORY = new IAutoComponentFactory()
+	{
+		@Override
+		public Component newComponent(MarkupContainer container, ComponentTag tag)
+		{
+			return new HtmlHeaderContainer(tag.getId());
+		}
+	};
+	
+	private static final IAutoComponentFactory HTML_HEADER_ITEMS_FACTORY = new IAutoComponentFactory()
+	{
+		@Override
+		public Component newComponent(MarkupContainer container, ComponentTag tag)
+		{
+			return new HtmlHeaderItemsContainer(tag.getId());
+		}
+	};
+	
 	/**
 	 * Construct.
 	 * 
@@ -95,35 +122,7 @@ public final class HtmlHeaderSectionHandler extends AbstractMarkupFilter
 		{
 			if (tag.getNamespace() == null)
 			{
-				// we found <head>
-				if (tag.isOpen())
-				{
-					foundHead = true;
-
-					if (tag.getId() == null)
-					{
-						tag.setId(HEADER_ID);
-						tag.setAutoComponentTag(true);
-						tag.setModified(true);
-					}
-				}
-				else if (tag.isClose())
-				{
-					if (foundHeaderItemsTag)
-					{
-						// revert the settings from above
-						ComponentTag headOpenTag = tag.getOpenTag();
-						// change the id because it is special. See HtmlHeaderResolver
-						headOpenTag.setId(HEADER_ID + "-Ignored");
-						headOpenTag.setAutoComponentTag(false);
-						headOpenTag.setModified(false);
-						headOpenTag.setFlag(ComponentTag.RENDER_RAW, true);
-					}
-
-					foundClosingHead = true;
-				}
-
-				return tag;
+				handleHeadTag(tag);
 			}
 			else
 			{
@@ -135,49 +134,108 @@ public final class HtmlHeaderSectionHandler extends AbstractMarkupFilter
 		else if (HtmlHeaderResolver.HEADER_ITEMS.equalsIgnoreCase(tag.getName()) &&
 				tag.getNamespace().equalsIgnoreCase(getWicketNamespace()))
 		{
-			if (foundHeaderItemsTag)
-			{
-				throw new MarkupException(new MarkupStream(markup),
-						"More than one <wicket:header-items/> detected in the <head> element. Only one is allowed.");
-			}
-			else if (foundClosingHead)
-			{
-				throw new MarkupException(new MarkupStream(markup),
-						"Detected <wicket:header-items/> after the closing </head> element.");
-			}
-
-			foundHeaderItemsTag = true;
-			tag.setId(HEADER_ID);
-			tag.setAutoComponentTag(true);
-			tag.setModified(true);
-
-			return tag;
+			handleHeaderItemsTag(tag);
 		}
 		else if (BODY.equalsIgnoreCase(tag.getName()) && (tag.getNamespace() == null))
 		{
-			// WICKET-4511: We found <body> inside <head> tag. Markup is not valid!
-			if (foundHead && !foundClosingHead)
-			{
-				throw new MarkupException(new MarkupStream(markup),
-					"Invalid page markup. Tag <BODY> found inside <HEAD>");
-			}
-
-			// We found <body>
-			if (foundHead == false)
-			{
-				insertHeadTag();
-			}
-
-			// <head> must always be before <body>
-			ignoreTheRest = true;
-			return tag;
+			handleBodyTag();
 		}
 
 		return tag;
 	}
 
 	/**
-	 * Insert <head> open and close tag (with empty body) to the current position.
+	 * Handle tag &lt;body&gt;
+	 */
+	private void handleBodyTag()
+	{
+		// WICKET-4511: We found <body> inside <head> tag. Markup is not valid!
+		if (foundHead && !foundClosingHead)
+		{
+			throw new MarkupException(new MarkupStream(markup),
+				"Invalid page markup. Tag <BODY> found inside <HEAD>");
+		}
+
+		// We found <body>
+		if (foundHead == false)
+		{
+			insertHeadTag();
+		}
+
+		// <head> must always be before <body>
+		ignoreTheRest = true;
+	}
+
+	/**
+	 * Handle tag &lt;wicket:header-items&gt;
+	 * 
+	 * @param tag
+	 */
+	private void handleHeaderItemsTag(ComponentTag tag)
+	{
+		if ((tag.isOpen() || tag.isOpenClose()) && foundHeaderItemsTag)
+		{
+			throw new MarkupException(new MarkupStream(markup),
+					"More than one <wicket:header-items/> detected in the <head> element. Only one is allowed.");
+		}
+		else if (foundClosingHead)
+		{
+			throw new MarkupException(new MarkupStream(markup),
+					"Detected <wicket:header-items/> after the closing </head> element.");
+		}
+
+		foundHeaderItemsTag = true;
+		tag.setId(HEADER_ID);
+		tag.setAutoComponentTag(true);
+		tag.setModified(true);
+		tag.setAutoComponentFactory(HTML_HEADER_ITEMS_FACTORY);
+	}
+
+	/**
+	 * Handle tag &lt;head&gt;
+	 * @param tag
+	 */
+	private void handleHeadTag(ComponentTag tag)
+	{
+		// we found <head>
+		if (tag.isOpen())
+		{
+			if(foundHead)
+			{
+				throw new MarkupException(new MarkupStream(markup),
+					"Tag <head> is not allowed at this position (do you have multiple <head> tags in your markup?).");
+			}
+			
+			foundHead = true;
+
+			if (tag.getId() == null)
+			{
+				tag.setId(HEADER_ID);
+				tag.setAutoComponentTag(true);
+				tag.setModified(true);
+				tag.setAutoComponentFactory(HTML_HEADER_FACTORY);
+			}
+		}
+		else if (tag.isClose())
+		{
+			if (foundHeaderItemsTag)
+			{
+				// revert the settings from above
+				ComponentTag headOpenTag = tag.getOpenTag();
+				// change the id because it is special. See HtmlHeaderResolver
+				headOpenTag.setId(HEADER_ID + "-Ignored");
+				headOpenTag.setAutoComponentTag(false);
+				headOpenTag.setModified(false);
+				headOpenTag.setFlag(ComponentTag.RENDER_RAW, true);
+				headOpenTag.setAutoComponentFactory(null);
+			}
+
+			foundClosingHead = true;
+		}
+	}
+
+	/**
+	 * Insert &lt;head&gt; open and close tag (with empty body) to the current position.
 	 */
 	private void insertHeadTag()
 	{
@@ -186,6 +244,7 @@ public final class HtmlHeaderSectionHandler extends AbstractMarkupFilter
 		openTag.setId(HEADER_ID);
 		openTag.setAutoComponentTag(true);
 		openTag.setModified(true);
+		openTag.setAutoComponentFactory(HTML_HEADER_FACTORY);
 
 		final ComponentTag closeTag = new ComponentTag(HEAD, TagType.CLOSE);
 		closeTag.setOpenTag(openTag);

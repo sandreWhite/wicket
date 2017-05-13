@@ -22,9 +22,8 @@ import org.apache.wicket.markup.parser.XmlTag;
 import org.apache.wicket.markup.parser.filter.EnclosureHandler;
 import org.apache.wicket.markup.parser.filter.WicketLinkTagHandler;
 import org.apache.wicket.markup.parser.filter.WicketRemoveTagHandler;
-import org.apache.wicket.markup.resolver.FragmentResolver;
+import org.apache.wicket.markup.parser.filter.WicketTagIdentifier;
 import org.apache.wicket.markup.resolver.HtmlHeaderResolver;
-import org.apache.wicket.markup.resolver.MarkupInheritanceResolver;
 import org.apache.wicket.markup.resolver.WicketContainerResolver;
 import org.apache.wicket.markup.resolver.WicketMessageResolver;
 
@@ -115,7 +114,7 @@ public class WicketTag extends ComponentTag
 	 */
 	public final boolean isChildTag()
 	{
-		return MarkupInheritanceResolver.CHILD.equalsIgnoreCase(getName());
+		return WicketTagIdentifier.CHILD.equalsIgnoreCase(getName());
 	}
 
 	/**
@@ -123,7 +122,7 @@ public class WicketTag extends ComponentTag
 	 */
 	public final boolean isExtendTag()
 	{
-		return MarkupInheritanceResolver.EXTEND.equalsIgnoreCase(getName());
+		return WicketTagIdentifier.EXTEND.equalsIgnoreCase(getName());
 	}
 
 	/**
@@ -171,11 +170,11 @@ public class WicketTag extends ComponentTag
 	 */
 	public final boolean isFragmentTag()
 	{
-		return FragmentResolver.FRAGMENT.equalsIgnoreCase(getName());
+		return WicketTagIdentifier.FRAGMENT.equalsIgnoreCase(getName());
 	}
 
 	/**
-	 * @return true if &lt;wicket:enclsoure&gt;
+	 * @return true if &lt;wicket:enclosure&gt;
 	 */
 	public final boolean isEnclosureTag()
 	{
@@ -205,8 +204,8 @@ public class WicketTag extends ComponentTag
 		else
 		{
 			final WicketTag tag = new WicketTag(xmlTag.mutable());
-			tag.setId(getId());
-			tag.setAutoComponentTag(isAutoComponentTag());
+			copyPropertiesTo(tag);
+
 			return tag;
 		}
 	}

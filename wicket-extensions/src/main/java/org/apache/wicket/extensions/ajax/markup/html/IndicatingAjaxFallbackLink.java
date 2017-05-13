@@ -35,11 +35,8 @@ public abstract class IndicatingAjaxFallbackLink<T> extends AjaxFallbackLink<T>
 	implements
 		IAjaxIndicatorAware
 {
-
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 1L;
+
 	private final AjaxIndicatorAppender indicatorAppender = new AjaxIndicatorAppender();
 
 	/**
@@ -64,9 +61,6 @@ public abstract class IndicatingAjaxFallbackLink<T> extends AjaxFallbackLink<T>
 		add(indicatorAppender);
 	}
 
-	/**
-	 * @see org.apache.wicket.ajax.IAjaxIndicatorAware#getAjaxIndicatorMarkupId()
-	 */
 	@Override
 	public String getAjaxIndicatorMarkupId()
 	{

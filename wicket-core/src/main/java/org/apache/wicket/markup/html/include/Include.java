@@ -20,8 +20,9 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.Charset;
 
-import javax.servlet.http.HttpServletRequest;
+import javax.servlet.ServletContext;
 
+import org.apache.wicket.IGenericComponent;
 import org.apache.wicket.WicketRuntimeException;
 import org.apache.wicket.core.util.resource.UrlResourceStream;
 import org.apache.wicket.markup.ComponentTag;
@@ -31,6 +32,7 @@ import org.apache.wicket.model.IModel;
 import org.apache.wicket.model.Model;
 import org.apache.wicket.request.UrlUtils;
 import org.apache.wicket.resource.ResourceUtil;
+import org.apache.wicket.util.lang.Args;
 
 
 /**
@@ -78,7 +80,7 @@ import org.apache.wicket.resource.ResourceUtil;
  * 
  * @author Eelco Hillenius
  */
-public class Include extends WebComponent
+public class Include extends WebComponent implements IGenericComponent<String, Include>
 {
 	private static final long serialVersionUID = 1L;
 
@@ -128,7 +130,7 @@ public class Include extends WebComponent
 	{
 		// gets the model object: should provide us with either an absolute or a
 		// relative url
-		String url = getDefaultModelObjectAsString();
+		String url = getModelObject();
 
 		if (UrlUtils.isRelative(url))
 		{
@@ -154,23 +156,24 @@ public class Include extends WebComponent
 	 *            the url to import
 	 * @return the imported url's contents
 	 */
-	private String importRelativeUrl(CharSequence url)
+	private String importRelativeUrl(String url)
 	{
-		// make the url absolute
-		HttpServletRequest req = (HttpServletRequest)getRequest().getContainerRequest();
-		StringBuilder buildUrl = new StringBuilder(url.length());
-		String scheme = req.getScheme();
-		int port = req.getServerPort();
-		buildUrl.append(scheme); // http, https
-		buildUrl.append("://");
-		buildUrl.append(req.getServerName());
-		if ((scheme.equals("http") && port != 80) || (scheme.equals("https") && port != 443))
+		Args.notEmpty(url, "url");
+
+		if (url.charAt(0) != '/')
 		{
-			buildUrl.append(':');
-			buildUrl.append(req.getServerPort());
+			url = '/' + url;
 		}
-		buildUrl.append(req.getContextPath()).append('/').append(url);
-		return importAbsoluteUrl(buildUrl);
+
+		try
+		{
+			ServletContext servletContext = getWebApplication().getServletContext();
+			URL resource = servletContext.getResource(url);
+			return importUrl(resource);
+		} catch (MalformedURLException mux)
+		{
+			throw new WicketRuntimeException(mux);
+		}
 	}
 
 	/**

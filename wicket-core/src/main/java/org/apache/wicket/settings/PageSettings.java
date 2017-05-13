@@ -18,11 +18,12 @@ package org.apache.wicket.settings;
 
 import java.util.List;
 
+import org.apache.wicket.IRequestListener;
 import org.apache.wicket.markup.resolver.IComponentResolver;
 import org.apache.wicket.util.lang.Generics;
 
 /**
- * Interface for page related settings.
+ * Class for page related settings.
  *
  * @author Jonathan Locke
  * @author Chris Turner
@@ -41,14 +42,14 @@ public class PageSettings
 	/** Determines if pages should be managed by a version manager by default */
 	private boolean versionPagesByDefault = true;
 
-	/** determines if mounted pages should be recreated after expiry */
-	private boolean recreateMountedPagesAfterExpiry = true;
+	/** determines if bookmarkable pages should be recreated after expiry */
+	private boolean recreateBookmarkablePagesAfterExpiry = true;
 
 	/**
-	 * determines whether component's listener interface can be executed
-	 * when its owner page is freshly created after expiration
+	 * determines whether an {@link IRequestListener} can be executed
+	 * when its owning page is freshly created after expiration
 	 */
-	private boolean callListenerInterfaceAfterExpiry = false;
+	private boolean callListenerAfterExpiry = false;
 
 	/**
 	 * Adds a component resolver to the list.
@@ -111,47 +112,47 @@ public class PageSettings
 	 * @see <a href="https://issues.apache.org/jira/browse/WICKET-4014">WICKET-4014</a>
 	 * @see <a href="https://issues.apache.org/jira/browse/WICKET-4290">WICKET-4290</a>
 	 */
-	public boolean getRecreateMountedPagesAfterExpiry()
+	public boolean getRecreateBookmarkablePagesAfterExpiry()
 	{
-		return recreateMountedPagesAfterExpiry;
+		return recreateBookmarkablePagesAfterExpiry;
 	}
 
 	/**
-	 * Sets the recreateMountedPagesAfterExpiry setting
+	 * Sets the recreateBookmarkablePagesAfterExpiry setting
 	 *
-	 * @param recreateMountedPagesAfterExpiry
+	 * @param recreateBookmarkablePagesAfterExpiry
 	 * @return {@code this} object for chaining
 	 */
-	public PageSettings setRecreateMountedPagesAfterExpiry(boolean recreateMountedPagesAfterExpiry)
+	public PageSettings setRecreateBookmarkablePagesAfterExpiry(boolean recreateBookmarkablePagesAfterExpiry)
 	{
-		this.recreateMountedPagesAfterExpiry = recreateMountedPagesAfterExpiry;
+		this.recreateBookmarkablePagesAfterExpiry = recreateBookmarkablePagesAfterExpiry;
 		return this;
 	}
 
 	/**
-	 * @return {@code true} if Wicket should execute the listener interface of a component
-	 *      which owner page is freshly created after expiration of the old one
-	 * @see #getRecreateMountedPagesAfterExpiry()
-	 * @see org.apache.wicket.request.component.IRequestableComponent#canCallListenerInterfaceAfterExpiry()
+	 * @return {@code true} if Wicket should execute an {@link IRequestListener} on a component
+	 *      which owning page is freshly created after expiration of the old one
+	 * @see #getRecreateBookmarkablePagesAfterExpiry()
+	 * @see org.apache.wicket.request.component.IRequestableComponent#canCallListenerAfterExpiry()
 	 */
-	public boolean getCallListenerInterfaceAfterExpiry()
+	public boolean getCallListenerAfterExpiry()
 	{
-		return recreateMountedPagesAfterExpiry && callListenerInterfaceAfterExpiry;
+		return recreateBookmarkablePagesAfterExpiry && callListenerAfterExpiry;
 	}
 
 	/**
-	 * Sets a setting that determines whether Wicket should execute the listener interface of a component
+	 * Sets a setting that determines whether Wicket should execute the {@link IRequestListener} on a component
 	 * which owner page is freshly created after expiration of the old one
 	 *
-	 * @param callListenerInterfaceAfterExpiry
-	 *          {@code true} if Wicket should execute the listener interface
-	 * @see #setRecreateMountedPagesAfterExpiry(boolean)
-	 * @see org.apache.wicket.request.component.IRequestableComponent#canCallListenerInterfaceAfterExpiry()
+	 * @param callAfterExpiry
+	 *          {@code true} if Wicket should execute the listener
+	 * @see #setRecreateBookmarkablePagesAfterExpiry(boolean)
+	 * @see org.apache.wicket.request.component.IRequestableComponent#canCallListenerAfterExpiry()
 	 * @return {@code this} object for chaining
 	 */
-	public PageSettings setCallListenerInterfaceAfterExpiry(boolean callListenerInterfaceAfterExpiry)
+	public PageSettings setCallListenerAfterExpiry(boolean callAfterExpiry)
 	{
-		this.callListenerInterfaceAfterExpiry = callListenerInterfaceAfterExpiry;
+		this.callListenerAfterExpiry = callAfterExpiry;
 		return this;
 	}
 }

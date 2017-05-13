@@ -19,11 +19,11 @@ package org.apache.wicket.page.expirationrecovery;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 
-import org.apache.wicket.WicketTestCase;
 import org.apache.wicket.protocol.http.PageExpiredException;
 import org.apache.wicket.request.mapper.parameter.PageParameters;
 import org.apache.wicket.settings.PageSettings;
 import org.apache.wicket.util.tester.FormTester;
+import org.apache.wicket.util.tester.WicketTestCase;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -56,7 +56,7 @@ public class PageExpirationRecoveryTest extends WicketTestCase
 	public void cannotRecreatePageShouldThrowPEE()
 	{
 		PageSettings pageSettings = tester.getApplication().getPageSettings();
-		pageSettings.setRecreateMountedPagesAfterExpiry(false); // CANNOT recreate
+		pageSettings.setRecreateBookmarkablePagesAfterExpiry(false); // CANNOT recreate
 
 		ExpirationRecoveryPage page = tester.startPage(ExpirationRecoveryPage.class, parameters);
 		assertEquals(parameters, page.getPageParameters());
@@ -68,11 +68,11 @@ public class PageExpirationRecoveryTest extends WicketTestCase
 	}
 
 	@Test
-	public void cannotExecuteListenerInterface()
+	public void cannotExecuteListener()
 	{
 		PageSettings pageSettings = tester.getApplication().getPageSettings();
-		pageSettings.setRecreateMountedPagesAfterExpiry(true); // CAN recreate
-		pageSettings.setCallListenerInterfaceAfterExpiry(false); // CANNOT execute listener interfaces
+		pageSettings.setRecreateBookmarkablePagesAfterExpiry(true); // CAN recreate
+		pageSettings.setCallListenerAfterExpiry(false); // CANNOT execute listener interfaces
 
 		ExpirationRecoveryPage page = tester.startPage(ExpirationRecoveryPage.class, parameters);
 		assertEquals(parameters, page.getPageParameters());
@@ -125,11 +125,11 @@ public class PageExpirationRecoveryTest extends WicketTestCase
 	}
 
 	@Test
-	public void canExecuteListenerInterface()
+	public void canExecuteListener()
 	{
 		PageSettings pageSettings = tester.getApplication().getPageSettings();
-		pageSettings.setCallListenerInterfaceAfterExpiry(true);
-		pageSettings.setRecreateMountedPagesAfterExpiry(true);
+		pageSettings.setCallListenerAfterExpiry(true);
+		pageSettings.setRecreateBookmarkablePagesAfterExpiry(true);
 
 		ExpirationRecoveryPage page = tester.startPage(ExpirationRecoveryPage.class, parameters);
 		assertThat(parameters, is(equalTo(page.getPageParameters())));

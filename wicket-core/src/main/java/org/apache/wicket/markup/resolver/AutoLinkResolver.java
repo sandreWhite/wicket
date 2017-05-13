@@ -30,8 +30,8 @@ import org.apache.wicket.markup.IMarkupFragment;
 import org.apache.wicket.markup.MarkupStream;
 import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.markup.html.link.BookmarkablePageLink;
+import org.apache.wicket.markup.html.link.DisabledAttributeLinkBehavior;
 import org.apache.wicket.markup.html.link.ExternalLink;
-import org.apache.wicket.markup.parser.filter.WicketLinkTagHandler;
 import org.apache.wicket.protocol.http.RequestUtils;
 import org.apache.wicket.request.handler.resource.ResourceReferenceRequestHandler;
 import org.apache.wicket.request.mapper.parameter.PageParameters;
@@ -168,6 +168,7 @@ public final class AutoLinkResolver implements IComponentResolver
 			super(id, pageClass, parameters);
 			this.anchor = anchor;
 			setAutoEnable(autoEnable);
+			add(new DisabledAttributeLinkBehavior());
 		}
 
 		/**
@@ -201,7 +202,7 @@ public final class AutoLinkResolver implements IComponentResolver
 	/**
 	 * Interface to delegate the actual resolving of auto components to.
 	 */
-	public static interface IAutolinkResolverDelegate
+	public interface IAutolinkResolverDelegate
 	{
 		/**
 		 * Returns a new auto component based on the pathInfo object. The auto component must have
@@ -554,7 +555,7 @@ public final class AutoLinkResolver implements IComponentResolver
 	 * Resolver that returns the proper attribute value from a component tag reflecting a URL
 	 * reference such as src or href.
 	 */
-	private static interface ITagReferenceResolver
+	private interface ITagReferenceResolver
 	{
 		/**
 		 * Gets the reference attribute value of the tag depending on the type of the tag. For
@@ -604,8 +605,7 @@ public final class AutoLinkResolver implements IComponentResolver
 			if (PackageResource.exists(clazz, href, getLocale(), getStyle(), getVariation()))
 			{
 				// Create the component implementing the link
-				resourceReference = new PackageResourceReference(clazz, href, getLocale(),
-					getStyle(), getVariation());
+				resourceReference = new PackageResourceReference(clazz, href, null, null, null);
 				}
 				else
 				{
@@ -845,7 +845,7 @@ public final class AutoLinkResolver implements IComponentResolver
 			// Try to find the Page matching the href
 			// Note: to not use tag.getId() because it will be modified while
 			// resolving the link and hence the 2nd render will fail.
-			Component link = resolveAutomaticLink(pathInfo, WicketLinkTagHandler.AUTOLINK_ID, tag);
+			Component link = resolveAutomaticLink(pathInfo, tag);
 
 			if (log.isDebugEnabled())
 			{
@@ -869,20 +869,13 @@ public final class AutoLinkResolver implements IComponentResolver
 	 * 
 	 * @param pathInfo
 	 *            The container where the link is
-	 * @param id
-	 *            the name of the component
 	 * @param tag
 	 *            the component tag
 	 * @return A BookmarkablePageLink<?> to handle the href
 	 */
-	private Component resolveAutomaticLink(final PathInfo pathInfo, final String id,
-		final ComponentTag tag)
+	private Component resolveAutomaticLink(final PathInfo pathInfo, final ComponentTag tag)
 	{
-		final MarkupContainer container = pathInfo.getContainer();
-		final Page page = container.getPage();
-
-		// Make the id (page-)unique
-		final String autoId = id + Integer.toString(page.getAutoIndex());
+		final String componentId = tag.getId();
 
 		// get the tag name, which is something like 'a' or 'script'
 		final String tagName = tag.getName();
@@ -899,7 +892,7 @@ public final class AutoLinkResolver implements IComponentResolver
 		Component autoComponent = null;
 		if (autolinkResolverDelegate != null)
 		{
-			autoComponent = autolinkResolverDelegate.newAutoComponent(autoId, pathInfo);
+			autoComponent = autolinkResolverDelegate.newAutoComponent(componentId, pathInfo);
 		}
 
 		if (autoComponent == null)
@@ -907,7 +900,7 @@ public final class AutoLinkResolver implements IComponentResolver
 			// resolving didn't have the desired result or there was no delegate
 			// found; fallback on the default resolving which is a simple
 			// component that leaves the tag unchanged
-			autoComponent = new AutolinkExternalLink(autoId, pathInfo.reference);
+			autoComponent = new WebMarkupContainer(componentId);
 		}
 
 		return autoComponent;

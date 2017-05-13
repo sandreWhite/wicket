@@ -42,10 +42,10 @@
 		</license>
 	</licenses>
 	<properties>
-		<wicket.version>7.0.0-SNAPSHOT</wicket.version>
-		<jetty9.version>9.2.3.v20140905</jetty9.version>
-		<log4j.version>2.0.2</log4j.version>
-		<junit.version>4.11</junit.version>
+		<wicket.version>@project.version@</wicket.version>
+		<jetty9.version>@jetty.version@</jetty9.version>
+		<log4j.version>@log4j.version@</log4j.version>
+		<junit.version>@junit.version@</junit.version>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<!-- allowed values: R7, 1.0, 1.5, 2.0 or none -->
 		<wtp.version>none</wtp.version>
@@ -88,21 +88,9 @@
 		<!--  JETTY DEPENDENCIES FOR TESTING  -->
 		<dependency>
 			<groupId>org.eclipse.jetty</groupId>
-			<artifactId>jetty-server</artifactId>
-			<version>${jetty9.version}</version>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.eclipse.jetty</groupId>
 			<artifactId>jetty-webapp</artifactId>
-			<version>${jetty9.version}</version>
 			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.eclipse.jetty</groupId>
-			<artifactId>jetty-util</artifactId>
 			<version>${jetty9.version}</version>
-			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.eclipse.jetty</groupId>
@@ -110,6 +98,15 @@
 			<version>${jetty9.version}</version>
 			<scope>test</scope>
 		</dependency>
+
+        <!-- uncomment if WebSocket support is needed
+		<dependency>
+			<groupId>org.eclipse.jetty.websocket</groupId>
+			<artifactId>javax-websocket-server-impl</artifactId>
+			<version>${jetty.version}</version>
+			<scope>test</scope>
+		</dependency>
+        -->
 	</dependencies>
 	<build>
 		<resources>
@@ -149,10 +146,10 @@
 				<inherited>true</inherited>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
-				<version>3.1</version>
+				<version>3.6.1</version>
 				<configuration>
-					<source>1.7</source>
-					<target>1.7</target>
+					<source>1.8</source>
+					<target>1.8</target>
 					<encoding>UTF-8</encoding>
 					<showWarnings>true</showWarnings>
 					<showDeprecation>true</showDeprecation>
@@ -175,7 +172,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-eclipse-plugin</artifactId>
-				<version>2.9</version>
+				<version>2.10</version>
 				<configuration>
 					<downloadSources>true</downloadSources>
 					<wtpversion>${wtp.version}</wtpversion>

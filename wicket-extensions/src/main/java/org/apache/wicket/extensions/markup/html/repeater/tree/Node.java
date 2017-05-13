@@ -16,6 +16,8 @@
  */
 package org.apache.wicket.extensions.markup.html.repeater.tree;
 
+import java.util.Optional;
+
 import org.apache.wicket.Component;
 import org.apache.wicket.MarkupContainer;
 import org.apache.wicket.ajax.AjaxRequestTarget;
@@ -70,12 +72,18 @@ public abstract class Node<T> extends Panel
 		super(id, model);
 
 		this.tree = tree;
+	}
+
+	@Override
+	protected void onInitialize()
+	{
+		super.onInitialize();
 
 		MarkupContainer junction = createJunctionComponent("junction");
 		junction.add(new StyleBehavior());
 		add(junction);
 
-		Component content = createContent(CONTENT_ID, model);
+		Component content = createContent(CONTENT_ID, getModel());
 		if (!content.getId().equals(CONTENT_ID))
 		{
 			throw new IllegalArgumentException(
@@ -115,7 +123,7 @@ public abstract class Node<T> extends Panel
 			private static final long serialVersionUID = 1L;
 
 			@Override
-			public void onClick(AjaxRequestTarget target)
+			public void onClick(Optional<AjaxRequestTarget> targetOptional)
 			{
 				toggle();
 			}

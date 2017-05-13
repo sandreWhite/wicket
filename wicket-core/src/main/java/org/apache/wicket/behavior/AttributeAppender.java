@@ -86,6 +86,23 @@ public class AttributeAppender extends AttributeModifier
 	}
 
 	/**
+	 * Creates an AttributeModifier that appends the value to the current value of the
+	 * attribute, and will add the attribute when it is not there already.
+	 *
+	 * @param attribute
+	 *            the attribute to append the appendModels value to
+	 * @param value
+	 *            the value to append
+	 * @param separator
+	 *            the separator string, comes between the original value and the append value
+	 */
+	public AttributeAppender(String attribute, Serializable value, String separator)
+	{
+		super(attribute, value);
+		setSeparator(separator);
+	}
+
+	/**
 	 * Creates an AttributeModifier that appends the appendModel's value to the current value of the
 	 * attribute, and will add the attribute when it is not there already.
 	 * 
@@ -127,14 +144,17 @@ public class AttributeAppender extends AttributeModifier
 	}
 
 	@Override
-	protected String newValue(String currentValue, String appendValue)
+	protected Serializable newValue(String currentValue, String appendValue)
 	{
 		// Short circuit when one of the values is empty: return the other value.
 		if (Strings.isEmpty(currentValue))
+		{
 			return appendValue != null ? appendValue : null;
+		}
 		else if (Strings.isEmpty(appendValue))
-			return currentValue != null ? currentValue : null;
-
+		{
+			return currentValue;
+		}
 		StringBuilder sb = new StringBuilder(currentValue);
 		sb.append((getSeparator() == null ? "" : getSeparator()));
 		sb.append(appendValue);

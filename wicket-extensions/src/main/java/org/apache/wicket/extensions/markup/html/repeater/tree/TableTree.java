@@ -17,9 +17,10 @@
 package org.apache.wicket.extensions.markup.html.repeater.tree;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
-import org.apache.wicket.ajax.AjaxRequestTarget;
+import org.apache.wicket.core.request.handler.IPartialPageRequestHandler;
 import org.apache.wicket.extensions.markup.html.repeater.data.table.DataTable;
 import org.apache.wicket.extensions.markup.html.repeater.data.table.IColumn;
 import org.apache.wicket.extensions.markup.html.repeater.tree.table.ITreeColumn;
@@ -108,7 +109,7 @@ public abstract class TableTree<T, S> extends AbstractTree<T>
 	 * Factory method for the wrapped {@link DataTable}.
 	 * 
 	 * Note: If overwritten, the DataTable's row items have to output their markupId, or
-	 * {@link #updateNode(Object, AjaxRequestTarget)} will fail.
+	 * {@link #updateNode(Object, Optional)} will fail.
 	 * 
 	 * @param id
 	 * @param columns
@@ -170,43 +171,37 @@ public abstract class TableTree<T, S> extends AbstractTree<T>
 	 * For updating of a single branch the whole table is added to the ART.
 	 */
 	@Override
-	public void updateBranch(T node, AjaxRequestTarget target)
+	public void updateBranch(T node, IPartialPageRequestHandler target)
 	{
-		if (target != null)
-		{
-			// TableTree always outputs markupId
-			target.add(this);
-		}
+		// TableTree always outputs markupId
+		target.add(this);
 	}
 
 	/**
 	 * For an update of a node the complete row item is added to the ART.
 	 */
 	@Override
-	public void updateNode(T t, final AjaxRequestTarget target)
+	public void updateNode(T t, IPartialPageRequestHandler target)
 	{
-		if (target != null)
+		final IModel<T> model = getProvider().model(t);
+		table.getBody().visitChildren(Item.class, new IVisitor<Item<T>, Void>()
 		{
-			final IModel<T> model = getProvider().model(t);
-			visitChildren(Item.class, new IVisitor<Item<T>, Void>()
+			@Override
+			public void component(Item<T> item, IVisit<Void> visit)
 			{
-				@Override
-				public void component(Item<T> item, IVisit<Void> visit)
-				{
-					NodeModel<T> nodeModel = (NodeModel<T>)item.getModel();
+				NodeModel<T> nodeModel = (NodeModel<T>)item.getModel();
 
-					if (model.equals(nodeModel.getWrappedModel()))
-					{
-						// row items are configured to output their markupId
-						target.add(item);
-						visit.stop();
-						return;
-					}
-					visit.dontGoDeeper();
+				if (model.equals(nodeModel.getWrappedModel()))
+				{
+					// row items are configured to output their markupId
+					target.add(item);
+					visit.stop();
+					return;
 				}
-			});
-			model.detach();
-		}
+				visit.dontGoDeeper();
+			}
+		});
+		model.detach();
 	}
 
 	/**

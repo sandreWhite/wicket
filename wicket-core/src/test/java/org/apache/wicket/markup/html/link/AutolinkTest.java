@@ -16,7 +16,7 @@
  */
 package org.apache.wicket.markup.html.link;
 
-import org.apache.wicket.WicketTestCase;
+import org.apache.wicket.util.tester.WicketTestCase;
 import org.junit.Test;
 
 
@@ -67,5 +67,12 @@ public class AutolinkTest extends WicketTestCase
 	{
 		tester.getApplication().getMarkupSettings().setAutomaticLinking(true);
 		executeTest(AutolinkPage_4.class, "AutolinkPageExpectedResult_4.html");
+	}
+
+	@Test
+	public void imgTagsShouldNotGetOnClick() throws Exception
+	{
+		tester.getApplication().getMarkupSettings().setAutomaticLinking(true);
+		executeTest(AutolinkPage_5.class, "AutolinkPageExpectedResult_5.html");
 	}
 }

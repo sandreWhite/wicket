@@ -18,8 +18,8 @@ package org.apache.wicket.queueing.transparentresolvers;
 
 import org.apache.wicket.Component;
 import org.apache.wicket.Page;
-import org.apache.wicket.WicketTestCase;
 import org.apache.wicket.markup.html.basic.Label;
+import org.apache.wicket.util.tester.WicketTestCase;
 import org.apache.wicket.util.visit.IVisit;
 import org.apache.wicket.util.visit.IVisitor;
 import org.junit.Test;
@@ -45,6 +45,11 @@ public class DequeueingTransparentWebMarkupContainerTest extends WicketTestCase
 	 * 
 	 * Transparent component inside page body must allow 
 	 * queued children components.
+	 * 
+	 * 
+	 * https://issues.apache.org/jira/browse/WICKET-5964
+	 * 
+	 * Queuing a component within an enclosure
 	 */
 	@Test
 	public void queuedComponentsInsideTransparentContainer()

@@ -196,7 +196,7 @@ public class AutoLabelTextResolver implements IComponentResolver
 					String text = labeled.getString(resourceKey);
 					if (!Strings.isEmpty(text))
 					{
-						return new StringResourceModel(resourceKey, labeled, null);
+						return new StringResourceModel(resourceKey, labeled);
 					}
 				}
 			}
@@ -262,7 +262,7 @@ public class AutoLabelTextResolver implements IComponentResolver
 			else
 			{
 				// ...found the form component, so we can return our label.
-				return new TextLabel("label" + container.getPage().getAutoIndex(), related);
+				return new TextLabel(tag.getId(), related);
 			}
 		}
 		return null;

@@ -421,19 +421,43 @@ public class CheckBoxMultipleChoice<T> extends ListMultipleChoice<T>
 			final CharSequence escaped = (getEscapeModelStrings() ? Strings.escapeMarkup(display)
 					: display);
 
+			// Allows user to add attributes to the <label..> tag
+			IValueMap labelAttrs = getAdditionalAttributesForLabel(index, choice);
+			StringBuilder extraLabelAttributes = new StringBuilder();
+			if (labelAttrs != null)
+			{
+				for (Map.Entry<String, Object> attr : labelAttrs.entrySet())
+				{
+					extraLabelAttributes.append(' ')
+							.append(Strings.escapeMarkup(attr.getKey()))
+							.append("=\"")
+							.append(Strings.escapeMarkup(attr.getValue().toString()))
+							.append('"');
+				}
+			}
+
 			switch (labelPosition)
 			{
 				case BEFORE:
-					buffer.append("<label for=\"");
-					buffer.append(idAttr);
-					buffer.append("\">").append(escaped).append("</label>");
-					break;
-				case WRAP_AFTER:
-					buffer.append("<label>");
+					buffer.append("<label for=\"")
+					.append(Strings.escapeMarkup(idAttr))
+					.append('"')
+					.append(extraLabelAttributes)
+					.append('>')
+					.append(escaped)
+					.append("</label>");
 					break;
 				case WRAP_BEFORE:
-					buffer.append("<label>");
-					buffer.append(escaped).append(' ');
+					buffer.append("<label")
+					.append(extraLabelAttributes)
+					.append('>')
+					.append(escaped)
+					.append(' ');
+					break;
+				case WRAP_AFTER:
+					buffer.append("<label")
+					.append(extraLabelAttributes)
+					.append('>');
 					break;
 			}
 
@@ -451,9 +475,9 @@ public class CheckBoxMultipleChoice<T> extends ListMultipleChoice<T>
 				buffer.append(" disabled=\"disabled\"");
 			}
 			buffer.append(" value=\"");
-			buffer.append(id);
+			buffer.append(Strings.escapeMarkup(id));
 			buffer.append("\" id=\"");
-			buffer.append(idAttr);
+			buffer.append(Strings.escapeMarkup(idAttr));
 			buffer.append('"');
 
 			// Allows user to add attributes to the <input..> tag
@@ -464,9 +488,9 @@ public class CheckBoxMultipleChoice<T> extends ListMultipleChoice<T>
 					for (Map.Entry<String, Object> attr : attrs.entrySet())
 					{
 						buffer.append(' ')
-							.append(attr.getKey())
+							.append(Strings.escapeMarkup(attr.getKey()))
 							.append("=\"")
-							.append(attr.getValue())
+							.append(Strings.escapeMarkup(attr.getValue().toString()))
 							.append('"');
 					}
 				}
@@ -474,11 +498,6 @@ public class CheckBoxMultipleChoice<T> extends ListMultipleChoice<T>
 
 			DebugSettings debugSettings = getApplication().getDebugSettings();
 			String componentPathAttributeName = debugSettings.getComponentPathAttributeName();
-			if (Strings.isEmpty(componentPathAttributeName) && debugSettings.isOutputComponentPath())
-			{
-				// fallback to the old 'wicketpath'
-				componentPathAttributeName = "wicketpath";
-			}
 			if (Strings.isEmpty(componentPathAttributeName) == false)
 			{
 				CharSequence path = getPageRelativePath();
@@ -499,18 +518,38 @@ public class CheckBoxMultipleChoice<T> extends ListMultipleChoice<T>
 					buffer.append("</label>");
 					break;
 				case WRAP_AFTER:
-					buffer.append(' ').append(escaped).append("</label>");
+					buffer.append(' ')
+						.append(escaped)
+						.append("</label>");
 					break;
 				case AFTER:
-					buffer.append("<label for=\"");
-					buffer.append(idAttr);
-					buffer.append("\">").append(escaped).append("</label>");
+					buffer.append("<label for=\"")
+						.append(Strings.escapeMarkup(idAttr))
+						.append('"')
+						.append(extraLabelAttributes)
+						.append('>')
+						.append(escaped)
+						.append("</label>");
 					break;
 			}
 
 			// Append option suffix
 			buffer.append(getSuffix(index, choice));
 		}
+	}
+
+	/**
+	 * You may subclass this method to provide additional attributes to the &lt;label ..&gt; tag.
+	 *
+	 * @param index
+	 *            index of the choice
+	 * @param choice
+	 *            the choice itself
+	 * @return tag attribute name/value pairs.
+	 */
+	protected IValueMap getAdditionalAttributesForLabel(int index, T choice)
+	{
+		return null;
 	}
 
 	/**

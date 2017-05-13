@@ -18,6 +18,9 @@ package org.apache.wicket.ajax;
 
 import java.util.List;
 
+import com.github.openjson.JSONArray;
+import com.github.openjson.JSONException;
+import com.github.openjson.JSONObject;
 import org.apache.wicket.Component;
 import org.apache.wicket.Page;
 import org.apache.wicket.WicketRuntimeException;
@@ -27,10 +30,7 @@ import org.apache.wicket.ajax.attributes.AjaxRequestAttributes.Method;
 import org.apache.wicket.ajax.attributes.CallbackParameter;
 import org.apache.wicket.ajax.attributes.IAjaxCallListener;
 import org.apache.wicket.ajax.attributes.ThrottlingSettings;
-import org.apache.wicket.ajax.json.JSONArray;
-import org.apache.wicket.ajax.json.JSONException;
-import org.apache.wicket.ajax.json.JSONObject;
-import org.apache.wicket.ajax.json.JsonFunction;
+import org.apache.wicket.ajax.json.JSONFunction;
 import org.apache.wicket.ajax.json.JsonUtils;
 import org.apache.wicket.behavior.AbstractAjaxBehavior;
 import org.apache.wicket.markup.head.IHeaderResponse;
@@ -70,6 +70,8 @@ public abstract class AbstractDefaultAjaxBehavior extends AbstractAjaxBehavior
 	private static final String AFTER_HANDLER_FUNCTION_TEMPLATE = "function(attrs){%s}";
 	private static final String BEFORE_SEND_HANDLER_FUNCTION_TEMPLATE = "function(attrs, jqXHR, settings){%s}";
 	private static final String BEFORE_HANDLER_FUNCTION_TEMPLATE = "function(attrs){%s}";
+	private static final String INIT_HANDLER_FUNCTION_TEMPLATE = "function(attrs){%s}";
+	private static final String DONE_HANDLER_FUNCTION_TEMPLATE = "function(attrs){%s}";
 
 	/**
 	 * Subclasses should call super.onBind()
@@ -79,7 +81,15 @@ public abstract class AbstractDefaultAjaxBehavior extends AbstractAjaxBehavior
 	@Override
 	protected void onBind()
 	{
-		getComponent().setOutputMarkupId(true);
+		final Component component = getComponent();
+		
+		component.setOutputMarkupId(true);
+		
+		if (getStatelessHint(component))
+		{
+			//generate behavior id
+			component.getBehaviorId(this);
+		}
 	}
 
 	/**
@@ -234,6 +244,11 @@ public abstract class AbstractDefaultAjaxBehavior extends AbstractAjaxBehavior
 						childSelector);
 			}
 
+			if (attributes.isSerializeRecursively())
+			{
+				attributesJson.put(AjaxAttributeName.SERIALIZE_RECURSIVELY.jsonName(), true);
+			}
+
 			String indicatorId = findIndicatorId();
 			if (Strings.isEmpty(indicatorId) == false)
 			{
@@ -244,7 +259,12 @@ public abstract class AbstractDefaultAjaxBehavior extends AbstractAjaxBehavior
 			{
 				if (ajaxCallListener != null)
 				{
-					CharSequence beforeHandler = ajaxCallListener.getBeforeHandler(component);
+					CharSequence initHandler = ajaxCallListener.getInitHandler(component);
+					appendListenerHandler(initHandler, attributesJson,
+						AjaxAttributeName.INIT_HANDLER.jsonName(),
+						INIT_HANDLER_FUNCTION_TEMPLATE);
+
+						CharSequence beforeHandler = ajaxCallListener.getBeforeHandler(component);
 					appendListenerHandler(beforeHandler, attributesJson,
 						AjaxAttributeName.BEFORE_HANDLER.jsonName(),
 						BEFORE_HANDLER_FUNCTION_TEMPLATE);
@@ -277,6 +297,12 @@ public abstract class AbstractDefaultAjaxBehavior extends AbstractAjaxBehavior
 					CharSequence precondition = ajaxCallListener.getPrecondition(component);
 					appendListenerHandler(precondition, attributesJson,
 						AjaxAttributeName.PRECONDITION.jsonName(), PRECONDITION_FUNCTION_TEMPLATE);
+
+					CharSequence doneHandler = ajaxCallListener.getDoneHandler(component);
+					appendListenerHandler(doneHandler, attributesJson,
+						AjaxAttributeName.DONE_HANDLER.jsonName(),
+						DONE_HANDLER_FUNCTION_TEMPLATE);
+
 				}
 			}
 
@@ -294,7 +320,7 @@ public abstract class AbstractDefaultAjaxBehavior extends AbstractAjaxBehavior
 				{
 					String func = String.format(DYNAMIC_PARAMETER_FUNCTION_TEMPLATE,
 						dynamicExtraParameter);
-					JsonFunction function = new JsonFunction(func);
+					JSONFunction function = new JSONFunction(func);
 					attributesJson.append(AjaxAttributeName.DYNAMIC_PARAMETER_FUNCTION.jsonName(),
 						function);
 				}
@@ -396,15 +422,15 @@ public abstract class AbstractDefaultAjaxBehavior extends AbstractAjaxBehavior
 	{
 		if (Strings.isEmpty(handler) == false)
 		{
-			final JsonFunction function;
-			if (handler instanceof JsonFunction)
+			final JSONFunction function;
+			if (handler instanceof JSONFunction)
 			{
-				function = (JsonFunction)handler;
+				function = (JSONFunction)handler;
 			}
 			else
 			{
 				String func = String.format(functionTemplate, handler);
-				function = new JsonFunction(func);
+				function = new JSONFunction(func);
 			}
 			attributesJson.append(propertyName, function);
 		}
@@ -504,30 +530,28 @@ public abstract class AbstractDefaultAjaxBehavior extends AbstractAjaxBehavior
 		sb.append("var attrs = ");
 		sb.append(attrsJson);
 		sb.append(";\n");
-		sb.append("var params = {");
-		boolean first = true;
+		JSONArray jsonArray = new JSONArray();
 		for (CallbackParameter curExtraParameter : extraParameters)
 		{
 			if (curExtraParameter.getAjaxParameterName() != null)
 			{
-				if (!first)
-					sb.append(',');
-				else
-					first = false;
-				sb.append('\'').append(curExtraParameter.getAjaxParameterName()).append("': ")
-					.append(curExtraParameter.getAjaxParameterCode());
+				try
+				{
+					JSONObject object = new JSONObject();
+					object.put("name", curExtraParameter.getAjaxParameterName());
+					object.put("value", new JSONFunction(curExtraParameter.getAjaxParameterCode()));
+					jsonArray.put(object);
+				}
+				catch (JSONException e)
+				{
+					throw new WicketRuntimeException(e);
+				}
 			}
 		}
-		sb.append("};\n");
-		if (attributes.getExtraParameters().isEmpty())
-		{
-			sb.append("attrs.").append(AjaxAttributeName.EXTRA_PARAMETERS).append(" = params;\n");
-		}
-		else
-		{
-			sb.append("attrs.").append(AjaxAttributeName.EXTRA_PARAMETERS).append(" = Wicket.merge(attrs.")
-					.append(AjaxAttributeName.EXTRA_PARAMETERS).append(", params);\n");
-		}
+		sb.append("var params = ").append(jsonArray).append(";\n");
+		sb.append("attrs.").append(AjaxAttributeName.EXTRA_PARAMETERS)
+				.append(" = params.concat(attrs.")
+				.append(AjaxAttributeName.EXTRA_PARAMETERS).append(" || []);\n");
 		sb.append("Wicket.Ajax.ajax(attrs);\n");
 		return sb;
 	}
@@ -562,9 +586,6 @@ public abstract class AbstractDefaultAjaxBehavior extends AbstractAjaxBehavior
 		return null;
 	}
 
-	/**
-	 * @see org.apache.wicket.behavior.IBehaviorListener#onRequest()
-	 */
 	@Override
 	public final void onRequest()
 	{

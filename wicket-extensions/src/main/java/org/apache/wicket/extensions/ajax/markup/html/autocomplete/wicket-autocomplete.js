@@ -19,7 +19,7 @@
  *
  * @author Janne Hietam&auml;ki
  */
-
+/* jshint latedef: false */
 ;(function (undefined) {
 	'use strict';
 
@@ -35,7 +35,7 @@
 		enterHidesWithNoSelection : false
 	};
 
-	Wicket.AutoComplete=function(elementId, callbackUrl, cfg, indicatorId){
+	Wicket.AutoComplete=function(elementId, ajaxAttributes, cfg, indicatorId){
 		var KEY_TAB=9;
 		var KEY_ENTER=13;
 		var KEY_ESC=27;
@@ -89,7 +89,15 @@
 			initialElement = obj;
 
 			Wicket.Event.add(obj, 'blur', function (jqEvent) {
-				window.setTimeout(hideAutoComplete, 500);
+				var menuId=getMenuId();
+
+				//workaround for IE. Clicks on scrollbar trigger
+				//'blur' event on input field. (See https://issues.apache.org/jira/browse/WICKET-5882)
+				if (menuId !== document.activeElement.id && (menuId + "-container") !== document.activeElement.id) {
+					window.setTimeout(hideAutoComplete, 500);
+				} else {
+					jQuery(this).trigger("focus");
+				}
 			});
 
 			Wicket.Event.add(obj, 'focus', function (jqEvent) {
@@ -333,63 +341,41 @@
 		}
 
 		function actualUpdateChoicesShowAll() {
-			showIndicator();
-
-			var paramName = cfg.parameterName;
-			var attrs = {
-				u: callbackUrl,
-				pre: [ function (attributes) {
-					// since attrs.c is not set, we have to check existence by ourself
-					if (!Wicket.$$(elementId)) {
-						return false;
-					}
-					
-					var activeIsInitial = (document.activeElement === initialElement);
-					var elementVal =  Wicket.$(elementId).value;
-					var hasMinimumLength = elementVal.length >= minInputLength;
-
-					var result = hasMinimumLength && activeIsInitial;
-					if (!result) {
-						hideAutoComplete();
-					}
-					return result;
-				}],
-				ep: {},
-				wr: false,
-				dt: 'html',
-				sh: [ doUpdateAllChoices ]
-			};
-			attrs.ep[paramName] = '';
-			Wicket.Ajax.ajax(attrs);
+			prepareAndExecuteAjaxUpdate(doUpdateAllChoices, '');
 		}
 
 		function actualUpdateChoices() {
+			prepareAndExecuteAjaxUpdate(doUpdateChoices, Wicket.$(elementId).value);
+		}
+		
+		function prepareAndExecuteAjaxUpdate(successHandler, currentInput){
 			showIndicator();
 
-			var paramName = cfg.parameterName;
-			var attrs = {
-				u: callbackUrl,
-				pre: [ function (attributes) {
-					// since attrs.c is not set, we have to check existence by ourself
-					if (!Wicket.$$(elementId)) {
-						return false;
-					}
+			var attrs = jQuery.extend({}, ajaxAttributes);
 
-					var activeIsInitial = (document.activeElement === initialElement);
-					var elementVal =  Wicket.$(elementId).value;
-					var hasMinimumLength = elementVal.length >= minInputLength;
-					var result = hasMinimumLength && activeIsInitial;
-					if (!result) {
-						hideAutoComplete();
-					}
-					return result;
-				}],
-				ep: {},
-				wr: false,
-				dt: 'html',
-				sh: [ doUpdateChoices ]
-			};
-			attrs.ep[paramName] = Wicket.$(elementId).value;
+			attrs.c = undefined;
+
+			attrs.pre = attrs.pre || [];
+			attrs.pre.push(function (attributes) {
+				var activeIsInitial = (document.activeElement === initialElement);
+				var elementVal = Wicket.$(elementId).value;
+				var hasMinimumLength = elementVal.length >= minInputLength;
+			
+				var result = hasMinimumLength && activeIsInitial;
+					
+				if (!result) {
+					hideAutoComplete();
+				}
+				
+				return result;
+			});	
+
+			attrs.sh = attrs.sh || [];
+			attrs.sh.push(successHandler);
+				
+			attrs.ep = attrs.ep || [];
+			attrs.ep.push({'name' : cfg.parameterName, 'value' : currentInput});
+				
 			Wicket.Ajax.ajax(attrs);
 		}
 
@@ -618,6 +604,9 @@
 				elementCount=selectableElements.length;
 
 				var clickFunc = function(event) {
+					// mouseOver might not be called, so select here at least
+					setSelected(getElementIndex(this));
+
 					var value = getSelectedValue();
 					value = handleSelection(value);
 					
